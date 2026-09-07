@@ -7,6 +7,7 @@ local.properties
 .DS_Store
 /Screenshot_*.jpg
 /Screenshot_*.png
+/Gemini_Generated_Image_*.png
 
 # Signing — never commit these; back them up somewhere safe
 /keystore/
