@@ -7,6 +7,7 @@ A small Android app for practising French spelling words, with two games.
 Opens to a menu:
 
 - **🔤 Lettres mélangées** — the scrambled-letters game
+- **🎯 Le bon mot** — hear the word, pick the correct spelling out of four
 - **✏️ Dictée sur papier** — listen → write on paper → type it in → get corrected
 - **📚 Gérer les mots** — enter / paste / delete the words
 - **📷 Scanner une liste** — photograph a word list and add it automatically
@@ -17,11 +18,19 @@ Both games draw from the same word list and can be replayed (words are reshuffle
 
 ### Lettres mélangées
 The word is spoken in French. Its letters appear scrambled as tiles; she **drags**
-each tile into its slot. Every letter **plays its sound as it lands** (see
-*Letter sounds* below). Correct ones lock in with a chime + "Bravo !"; wrong
-letters get a tone + "Essaie encore" and slide back. **💡 Indice** drops the next
-correct letter into place. **🔊 Épeler** spells the word out slowly. A space in
-the target (e.g. *un siècle*) shows as a gap between slot groups — no tile for it.
+each tile into its slot. As tiles go in, the app **sounds out what she's built so
+far** — for *construction*, placing c, o, n reads "c", "co", "con" (it re-reads
+the growing run and stops at word boundaries). Solving plays a chime + "Bravo !";
+a wrong letter gets a tone + "Essaie encore" and slides back. **💡 Indice** drops
+the next correct letter into place. **🔊 Épeler** spells the word out slowly. A
+space in the target (e.g. *un siècle*) shows as a gap between slot groups — no
+tile for it.
+
+### Le bon mot
+The word is spoken. Four spellings are shown — one right, three plausible
+misspellings (wrong accent, doubled/dropped consonant, confusable ending,
+swapped letters). She taps one: right → chime + "Bravo !"; wrong → tone +
+"Essaie encore", that option greys out, she tries again.
 
 ### Dictée sur papier
 Tap **🔊 Écouter le mot**, she writes it on paper, then types what she wrote with

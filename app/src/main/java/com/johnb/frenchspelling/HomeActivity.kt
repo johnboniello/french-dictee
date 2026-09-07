@@ -21,6 +21,7 @@ class HomeActivity : AppCompatActivity() {
         countView = findViewById(R.id.countView)
 
         findViewById<Button>(R.id.scrambleBtn).setOnClickListener { open(ScrambleActivity::class.java) }
+        findViewById<Button>(R.id.choiceBtn).setOnClickListener { open(ChoiceActivity::class.java) }
         findViewById<Button>(R.id.dictationBtn).setOnClickListener { open(MainActivity::class.java) }
         findViewById<Button>(R.id.wordsBtn).setOnClickListener { open(WordListActivity::class.java) }
         findViewById<Button>(R.id.scanBtn).setOnClickListener { open(ScanActivity::class.java) }

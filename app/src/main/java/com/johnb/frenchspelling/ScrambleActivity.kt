@@ -49,6 +49,7 @@ class ScrambleActivity : AppCompatActivity() {
     private var slotChars: List<Char> = emptyList()
     private val slotRects = ArrayList<Rect>()
     private val slotFilledBy = ArrayList<Tile?>()
+    private val wordStartSlots = HashSet<Int>()
     private val tiles = ArrayList<Tile>()
     private var tileSize = 0
     private var gap = 0
@@ -142,6 +143,7 @@ class ScrambleActivity : AppCompatActivity() {
         board.removeAllViews()
         slotRects.clear()
         slotFilledBy.clear()
+        wordStartSlots.clear()
         tiles.clear()
         feedbackView.text = ""
         nextBtn.visibility = View.GONE
@@ -164,14 +166,18 @@ class ScrambleActivity : AppCompatActivity() {
         val widths = specChars.map { if (it == ' ') spaceW else tileSize }
         val specPos = flowItems(widths, boardW, dp(8))
 
+        var afterBreak = true
         for (i in specChars.indices) {
             if (specChars[i] == ' ') {
+                afterBreak = true
                 val spacer = View(this)
                 board.addView(spacer, FrameLayout.LayoutParams(spaceW, tileSize).apply {
                     leftMargin = specPos[i].first
                     topMargin = specPos[i].second
                 })
             } else {
+                if (afterBreak) wordStartSlots.add(slotFilledBy.size)
+                afterBreak = false
                 val v = View(this)
                 v.setBackgroundResource(R.drawable.slot)
                 board.addView(v, FrameLayout.LayoutParams(tileSize, tileSize).apply {
@@ -284,11 +290,41 @@ class ScrambleActivity : AppCompatActivity() {
             tile.slotIndex = best
             slotFilledBy[best] = tile
             animateTo(tile.view, r.left.toFloat(), r.top.toFloat())
-            LetterAudio.play(this, tts, ttsReady, tile.letter)
-            if (slotFilledBy.all { it != null }) board.postDelayed({ checkSolution() }, 240)
+            val full = slotFilledBy.all { it != null }
+            announcePlacement(best, tile.letter)
+            if (full) board.postDelayed({ checkSolution() }, 700)
         } else {
             animateTo(tile.view, tile.homeX, tile.homeY)
         }
+    }
+
+    /**
+     * Speaks what she has built so far: the run of consecutively-filled slots
+     * that contains [slotIndex], stopping at word boundaries. For "construction",
+     * placing c, o, n in order says "c", "co", "con". A lone letter uses its
+     * sound; two or more are spoken as a chunk.
+     */
+    private fun announcePlacement(slotIndex: Int, letter: Char) {
+        val run = spokenRunFor(slotIndex)
+        if (run.length >= 2) speakChunk(run) else LetterAudio.play(this, tts, ttsReady, letter)
+    }
+
+    private fun spokenRunFor(k: Int): String {
+        if (k < 0 || k >= slotFilledBy.size || slotFilledBy[k] == null) return ""
+        var lo = k
+        while (lo > 0 && lo !in wordStartSlots && slotFilledBy[lo - 1] != null) lo--
+        var hi = k
+        while (hi + 1 < slotFilledBy.size && (hi + 1) !in wordStartSlots && slotFilledBy[hi + 1] != null) hi++
+        val sb = StringBuilder()
+        for (i in lo..hi) sb.append(slotFilledBy[i]?.letter ?: ' ')
+        return sb.toString().trim()
+    }
+
+    private fun speakChunk(text: String) {
+        val t = tts ?: return
+        if (!ttsReady || text.isBlank()) return
+        t.setSpeechRate((store.rate() - 0.1f).coerceAtLeast(0.5f))
+        t.speak(text, TextToSpeech.QUEUE_FLUSH, null, "chunk")
     }
 
     private fun revealNext() {
@@ -310,9 +346,10 @@ class ScrambleActivity : AppCompatActivity() {
         tile.view.setBackgroundResource(R.drawable.tile_correct)
         val r = slotRects[k]
         animateTo(tile.view, r.left.toFloat(), r.top.toFloat())
-        LetterAudio.play(this, tts, ttsReady, want)
+        val full = slotFilledBy.all { it != null }
+        announcePlacement(k, want)
         hintUsedThisWord = true
-        if (slotFilledBy.all { it != null }) board.postDelayed({ checkSolution() }, 240)
+        if (full) board.postDelayed({ checkSolution() }, 700)
     }
 
     private fun checkSolution() {
