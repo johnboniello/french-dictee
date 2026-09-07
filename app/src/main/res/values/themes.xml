@@ -1,9 +1,15 @@
-<resources>
-    <style name="Theme.FrenchSpelling" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Force a light look everywhere: this is a children's app and it must stay
+         readable even when the phone is in dark mode / has "force dark" on. -->
+    <style name="Theme.FrenchSpelling" parent="Theme.MaterialComponents.Light.DarkActionBar">
         <item name="colorPrimary">@color/blue</item>
         <item name="colorPrimaryDark">@color/blue_dark</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/blue</item>
         <item name="colorOnSecondary">@color/white</item>
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:textColorPrimary">#1A1A1A</item>
+        <item name="android:textColorSecondary">#5F6368</item>
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
     </style>
 </resources>

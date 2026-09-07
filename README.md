@@ -18,19 +18,23 @@ Both games draw from the same word list and can be replayed (words are reshuffle
 ### Lettres mélangées
 The word is spoken in French. Its letters appear scrambled as tiles; she **drags**
 each tile into its slot. Every letter **plays its sound as it lands** (see
-*Letter sounds* below). Wrong letters turn red and slide back; correct ones lock
-in. **💡 Indice** drops the next correct letter into place. **🔊 Épeler** spells
-the word out slowly. Spaces in a word are shown as fixed gaps (no tile needed).
+*Letter sounds* below). Correct ones lock in with a chime + "Bravo !"; wrong
+letters get a tone + "Essaie encore" and slide back. **💡 Indice** drops the next
+correct letter into place. **🔊 Épeler** spells the word out slowly. A space in
+the target (e.g. *un siècle*) shows as a gap between slot groups — no tile for it.
 
 ### Dictée sur papier
-Tap **🔊 Écouter le mot**, she writes it on paper, then enters what she wrote with
-the on-screen letter keys (accents, `-`, `'`, and now **espace**) and/or **🎤
-Dicter les lettres**. **✅ Vérifier** shows both spellings letter-by-letter:
-green = right, red = wrong, red underlined = missing, red struck-through = extra.
-**💡 Indice** reveals one more letter each tap; **🔊 Épeler lentement** spells it out.
+Tap **🔊 Écouter le mot**, she writes it on paper, then types what she wrote with
+the on-screen letter keys (accents, `-`, `'`, **espace**). **✅ Vérifier**:
+- **Right** → a chime + "Bravo !", the word shown in green.
+- **Wrong** → a soft tone + "Essaie encore"; the correct spelling is **not**
+  shown. Her answer stays visible with the wrong/missing letters in red so she
+  can fix them and check again. **💡 Indice** reveals one more letter each tap;
+  **🔊 Épeler lentement** spells it out. After 3 wrong tries a **👁 Réponse**
+  button appears to reveal the answer.
 
-Using a hint in either game = solved "avec aide" (no score point; counted
-separately).
+Using a hint or revealing the answer = solved "avec aide" (no score point;
+counted separately).
 
 ## Letter sounds
 
@@ -54,9 +58,9 @@ first time.
 - Android 8.0 (API 26) or newer.
 - **French text-to-speech voice** — most devices have it; if not, the app says so.
   Install under *Settings → System → Languages → Text-to-speech output*.
-- **Internet** only for *🎤 Dicter les lettres* (speech recognition is online).
-  Everything else — the games, TTS, OCR — works offline.
-- First use of the microphone / camera prompts for permission.
+- Works fully offline (games, TTS, OCR). First use of the camera prompts for
+  permission.
+- The app always uses a light theme, even if the phone is in dark mode.
 
 ## Building
 

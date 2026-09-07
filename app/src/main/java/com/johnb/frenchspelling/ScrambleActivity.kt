@@ -20,7 +20,7 @@ import kotlin.math.abs
 /**
  * "Lettres mélangées" — the word is spoken, its letters appear scrambled as tiles,
  * and the child drags each tile into its slot. Every letter plays its sound as it
- * lands (recording from assets/lettersounds if present, otherwise the voice).
+ * lands. Spaces in the target (e.g. "un siècle") show as a gap between slot groups.
  */
 class ScrambleActivity : AppCompatActivity() {
 
@@ -119,6 +119,7 @@ class ScrambleActivity : AppCompatActivity() {
         tts?.stop()
         tts?.shutdown()
         LetterAudio.release()
+        Feedback.release()
         super.onDestroy()
     }
 
@@ -148,7 +149,8 @@ class ScrambleActivity : AppCompatActivity() {
         solvedThisWord = false
 
         val target = currentWord()
-        slotChars = target.filter { it != ' ' }.toList()
+        val specChars = target.toList()
+        slotChars = specChars.filter { it != ' ' }
         val n = slotChars.size
         if (n == 0) {
             nextWord()
@@ -157,27 +159,38 @@ class ScrambleActivity : AppCompatActivity() {
 
         val boardW = if (board.width > 0) board.width else resources.displayMetrics.widthPixels
         tileSize = ((boardW - gap * 9) / 8).coerceIn(dp(38), dp(60))
+        val spaceW = tileSize / 2
 
-        val slotPos = flow(n, boardW, dp(8))
-        for (i in 0 until n) {
-            val v = View(this)
-            v.setBackgroundResource(R.drawable.slot)
-            val lp = FrameLayout.LayoutParams(tileSize, tileSize)
-            lp.leftMargin = slotPos[i].first
-            lp.topMargin = slotPos[i].second
-            board.addView(v, lp)
-            slotRects.add(
-                Rect(
-                    slotPos[i].first,
-                    slotPos[i].second,
-                    slotPos[i].first + tileSize,
-                    slotPos[i].second + tileSize
+        val widths = specChars.map { if (it == ' ') spaceW else tileSize }
+        val specPos = flowItems(widths, boardW, dp(8))
+
+        for (i in specChars.indices) {
+            if (specChars[i] == ' ') {
+                val spacer = View(this)
+                board.addView(spacer, FrameLayout.LayoutParams(spaceW, tileSize).apply {
+                    leftMargin = specPos[i].first
+                    topMargin = specPos[i].second
+                })
+            } else {
+                val v = View(this)
+                v.setBackgroundResource(R.drawable.slot)
+                board.addView(v, FrameLayout.LayoutParams(tileSize, tileSize).apply {
+                    leftMargin = specPos[i].first
+                    topMargin = specPos[i].second
+                })
+                slotRects.add(
+                    Rect(
+                        specPos[i].first,
+                        specPos[i].second,
+                        specPos[i].first + tileSize,
+                        specPos[i].second + tileSize
+                    )
                 )
-            )
-            slotFilledBy.add(null)
+                slotFilledBy.add(null)
+            }
         }
 
-        val slotsBottom = (slotPos.maxOfOrNull { it.second } ?: dp(8)) + tileSize
+        val slotsBottom = (specPos.maxOfOrNull { it.second } ?: dp(8)) + tileSize
         val trayTop = slotsBottom + dp(28)
 
         val letters = slotChars.toMutableList()
@@ -192,8 +205,7 @@ class ScrambleActivity : AppCompatActivity() {
         val trayPos = flow(n, boardW, trayTop)
         for (i in 0 until n) {
             val tv = makeTileView(letters[i])
-            val lp = FrameLayout.LayoutParams(tileSize, tileSize)
-            board.addView(tv, lp)
+            board.addView(tv, FrameLayout.LayoutParams(tileSize, tileSize))
             val tile = Tile(tv, letters[i])
             tile.homeX = trayPos[i].first.toFloat()
             tile.homeY = trayPos[i].second.toFloat()
@@ -319,14 +331,12 @@ class ScrambleActivity : AppCompatActivity() {
             feedbackView.text = if (hintUsedThisWord) "Bravo ! (avec aide)" else "Bravo ! 🎉"
             if (hintUsedThisWord) aided++ else score++
             progressView.text = progressText()
-            if (ttsReady) {
-                tts?.setSpeechRate(store.rate())
-                tts?.speak(currentWord(), TextToSpeech.QUEUE_FLUSH, null, "w")
-            }
+            Feedback.correct(this, tts, ttsReady)
             nextBtn.visibility = View.VISIBLE
         } else {
             feedbackView.setTextColor(red)
             feedbackView.text = "Pas tout à fait — les lettres en rouge reviennent."
+            Feedback.wrong(this, tts, ttsReady)
             for (i in slotChars.indices) {
                 val t = slotFilledBy[i] ?: continue
                 if (!sameLetter(t.letter, slotChars[i])) {
@@ -376,20 +386,32 @@ class ScrambleActivity : AppCompatActivity() {
         v.animate().x(x).y(y).setDuration(140).start()
     }
 
-    /** Positions `count` square cells of `tileSize`, centred per row, wrapping to fit `boardW`. */
-    private fun flow(count: Int, boardW: Int, startY: Int): List<Pair<Int, Int>> {
-        val per = maxOf(1, (boardW + gap) / (tileSize + gap))
-        val res = ArrayList<Pair<Int, Int>>(count)
+    /** Equal square cells, centred per row, wrapping to fit `boardW`. */
+    private fun flow(count: Int, boardW: Int, startY: Int): List<Pair<Int, Int>> =
+        flowItems(List(count) { tileSize }, boardW, startY)
+
+    /** Positions items of the given widths in centred rows, wrapping to fit `boardW`. */
+    private fun flowItems(widths: List<Int>, boardW: Int, startY: Int): List<Pair<Int, Int>> {
+        val res = ArrayList<Pair<Int, Int>>(widths.size)
         var i = 0
-        while (i < count) {
-            val row = i / per
-            val inRow = minOf(per, count - row * per)
-            val rowW = inRow * tileSize + (inRow - 1) * gap
-            val x0 = ((boardW - rowW) / 2).coerceAtLeast(0)
-            for (c in 0 until inRow) {
-                res.add(Pair(x0 + c * (tileSize + gap), startY + row * (tileSize + gap)))
-                i++
+        var row = 0
+        while (i < widths.size) {
+            var rowW = 0
+            var j = i
+            while (j < widths.size) {
+                val add = widths[j] + (if (j > i) gap else 0)
+                if (j > i && rowW + add > boardW) break
+                rowW += add
+                j++
             }
+            var x = ((boardW - rowW) / 2).coerceAtLeast(0)
+            val y = startY + row * (tileSize + gap)
+            for (k in i until j) {
+                res.add(Pair(x, y))
+                x += widths[k] + gap
+            }
+            i = j
+            row++
         }
         return res
     }

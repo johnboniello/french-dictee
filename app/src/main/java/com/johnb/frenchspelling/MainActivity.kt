@@ -1,12 +1,7 @@
 package com.johnb.frenchspelling
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -20,18 +15,16 @@ import android.widget.Button
 import android.widget.GridLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import java.util.Locale
 
+/** "Dictée sur papier": listen, write on paper, type it in, get corrected. */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var store: WordStore
     private var tts: TextToSpeech? = null
     private var ttsReady = false
-    private var recognizer: SpeechRecognizer? = null
 
     private var words: MutableList<String> = mutableListOf()
     private var order: MutableList<Int> = mutableListOf()
@@ -42,6 +35,8 @@ class MainActivity : AppCompatActivity() {
     private var scoredThisWord = false
     private var aidedThisWord = false
     private var revealCount = 0
+    private var attempts = 0
+    private var answerRevealed = false
 
     private lateinit var emptyView: TextView
     private lateinit var emptyAddBtn: Button
@@ -56,26 +51,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var letterGrid: GridLayout
     private lateinit var backspaceBtn: Button
     private lateinit var clearBtn: Button
-    private lateinit var micBtn: Button
     private lateinit var checkBtn: Button
-    private lateinit var heardView: TextView
     private lateinit var resultBox: View
+    private lateinit var answerRow: View
     private lateinit var targetView: TextView
     private lateinit var yourView: TextView
     private lateinit var summaryView: TextView
     private lateinit var hearAnswerBtn: Button
     private lateinit var retryBtn: Button
+    private lateinit var revealAnswerBtn: Button
     private lateinit var nextBtn: Button
 
     private val green = 0xFF2E7D32.toInt()
     private val red = 0xFFC62828.toInt()
     private val grey = 0xFF9E9E9E.toInt()
 
-    private val micPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) startListening()
-            else toast("Micro refusé : utilise le clavier de lettres.")
-        }
+    private val revealThreshold = 3
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,15 +89,15 @@ class MainActivity : AppCompatActivity() {
         letterGrid = findViewById(R.id.letterGrid)
         backspaceBtn = findViewById(R.id.backspaceBtn)
         clearBtn = findViewById(R.id.clearBtn)
-        micBtn = findViewById(R.id.micBtn)
         checkBtn = findViewById(R.id.checkBtn)
-        heardView = findViewById(R.id.heardView)
         resultBox = findViewById(R.id.resultBox)
+        answerRow = findViewById(R.id.answerRow)
         targetView = findViewById(R.id.targetView)
         yourView = findViewById(R.id.yourView)
         summaryView = findViewById(R.id.summaryView)
         hearAnswerBtn = findViewById(R.id.hearAnswerBtn)
         retryBtn = findViewById(R.id.retryBtn)
+        revealAnswerBtn = findViewById(R.id.revealAnswerBtn)
         nextBtn = findViewById(R.id.nextBtn)
 
         buildLetterKeys()
@@ -122,20 +113,13 @@ class MainActivity : AppCompatActivity() {
         }
         clearBtn.setOnClickListener {
             guess.clear()
-            heardView.visibility = View.GONE
             refreshGuess()
         }
-        micBtn.setOnClickListener { onMicTapped() }
         checkBtn.setOnClickListener { onCheck() }
-        retryBtn.setOnClickListener {
-            guess.clear()
-            heardView.visibility = View.GONE
-            resultBox.visibility = View.GONE
-            scoredThisWord = false
-            refreshGuess()
-        }
+        retryBtn.setOnClickListener { resultBox.visibility = View.GONE }
         nextBtn.setOnClickListener { nextWord() }
         hearAnswerBtn.setOnClickListener { speakSpelledOut() }
+        revealAnswerBtn.setOnClickListener { revealAnswer() }
         hintBtn.setOnClickListener { revealHint() }
         spellBtn.setOnClickListener {
             if (words.isNotEmpty()) Voice.spellSlowly(tts, ttsReady, currentWord(), store.rate())
@@ -166,8 +150,8 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         tts?.stop()
         tts?.shutdown()
-        recognizer?.destroy()
         LetterAudio.release()
+        Feedback.release()
         super.onDestroy()
     }
 
@@ -189,11 +173,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun initRound() {
         guess.clear()
-        heardView.visibility = View.GONE
         resultBox.visibility = View.GONE
         scoredThisWord = false
         aidedThisWord = false
         revealCount = 0
+        attempts = 0
+        answerRevealed = false
         pos = 0
         score = 0
         aidedCount = 0
@@ -218,6 +203,8 @@ class MainActivity : AppCompatActivity() {
     private fun render() {
         revealCount = 0
         aidedThisWord = false
+        attempts = 0
+        answerRevealed = false
         progressView.text = progressText()
         refreshGuess()
         updateHintView()
@@ -282,7 +269,6 @@ class MainActivity : AppCompatActivity() {
             b.layoutParams = lp
             b.setOnClickListener {
                 guess.append(k)
-                heardView.visibility = View.GONE
                 refreshGuess()
                 LetterAudio.play(this, tts, ttsReady, k[0])
             }
@@ -309,85 +295,54 @@ class MainActivity : AppCompatActivity() {
         t.speak(letters, TextToSpeech.QUEUE_ADD, null, "spell")
     }
 
-    private fun onMicTapped() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            == PackageManager.PERMISSION_GRANTED
-        ) {
-            startListening()
-        } else {
-            micPermission.launch(Manifest.permission.RECORD_AUDIO)
-        }
-    }
-
-    private fun startListening() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            toast("Reconnaissance vocale indisponible sur cet appareil.")
-            return
-        }
-        recognizer?.destroy()
-        val sr = SpeechRecognizer.createSpeechRecognizer(this)
-        recognizer = sr
-        sr.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { micBtn.text = "🎤  Parle…" }
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { micBtn.text = "🎤  …" }
-            override fun onError(error: Int) {
-                micBtn.text = "🎤  Dicter les lettres"
-                toast(speechError(error))
-            }
-            override fun onResults(results: Bundle?) {
-                micBtn.text = "🎤  Dicter les lettres"
-                val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                if (list.isNullOrEmpty()) {
-                    toast("Je n'ai pas entendu. Réessaie.")
-                    return
-                }
-                val hyp = list[0]
-                val parsed = LetterParser.parse(hyp)
-                heardView.text = "J'ai entendu : « $hyp »   →   $parsed"
-                heardView.visibility = View.VISIBLE
-                guess.clear()
-                guess.append(parsed)
-                refreshGuess()
-            }
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "fr-FR")
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
-        }
-        micBtn.text = "🎤  …"
-        sr.startListening(intent)
-    }
-
     private fun onCheck() {
         if (guess.isEmpty()) {
             toast("Écris d'abord ton orthographe.")
             return
         }
         val res = SpellingChecker.check(currentWord(), guess.toString())
-        targetView.text = renderRow(res, targetRow = true)
         yourView.text = renderRow(res, targetRow = false)
+
         if (res.correct) {
             if (!scoredThisWord) {
-                if (aidedThisWord) aidedCount++ else score++
+                if (aidedThisWord || answerRevealed) aidedCount++ else score++
                 scoredThisWord = true
             }
+            answerRow.visibility = View.VISIBLE
+            targetView.text = renderRow(res, targetRow = true)
+            summaryView.setTextColor(green)
             summaryView.text =
-                if (aidedThisWord) "Bravo ! 🎉  (avec aide)" else "Bravo ! 🎉  Orthographe parfaite."
+                if (aidedThisWord || answerRevealed) "Bravo ! 🎉  (avec aide)"
+                else "Bravo ! 🎉  Orthographe parfaite."
+            hearAnswerBtn.visibility = View.VISIBLE
+            retryBtn.visibility = View.GONE
+            revealAnswerBtn.visibility = View.GONE
+            nextBtn.visibility = View.VISIBLE
             progressView.text = progressText()
+            Feedback.correct(this, tts, ttsReady)
         } else {
-            summaryView.text =
-                "${res.correctCount} / ${res.total} lettres bien placées. Corrige les lettres en rouge, puis réessaie."
+            attempts++
+            if (!answerRevealed) answerRow.visibility = View.GONE
+            summaryView.setTextColor(red)
+            summaryView.text = "Essaie encore — corrige les lettres en rouge."
+            hearAnswerBtn.visibility = View.GONE
+            retryBtn.visibility = View.VISIBLE
+            revealAnswerBtn.visibility =
+                if (attempts >= revealThreshold && !answerRevealed) View.VISIBLE else View.GONE
+            nextBtn.visibility = View.VISIBLE
+            Feedback.wrong(this, tts, ttsReady)
         }
         resultBox.visibility = View.VISIBLE
+    }
+
+    private fun revealAnswer() {
+        answerRevealed = true
+        aidedThisWord = true
+        answerRow.visibility = View.VISIBLE
+        targetView.text = greenWord(currentWord())
+        summaryView.setTextColor(0xFF1A1A1A.toInt())
+        summaryView.text = "La bonne réponse : ${currentWord()}"
+        revealAnswerBtn.visibility = View.GONE
     }
 
     private fun nextWord() {
@@ -397,7 +352,6 @@ class MainActivity : AppCompatActivity() {
         }
         pos++
         guess.clear()
-        heardView.visibility = View.GONE
         scoredThisWord = false
         render()
     }
@@ -410,6 +364,17 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton("Fermer", null)
             .setCancelable(false)
             .show()
+    }
+
+    private fun greenWord(w: String): CharSequence {
+        val sb = SpannableStringBuilder()
+        for (c in w) {
+            val s = sb.length
+            sb.append(c)
+            sb.append("  ")
+            sb.setSpan(ForegroundColorSpan(green), s, s + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return sb
     }
 
     private fun renderRow(res: SpellingChecker.Result, targetRow: Boolean): CharSequence {
@@ -451,19 +416,6 @@ class MainActivity : AppCompatActivity() {
             if (underline) sb.setSpan(UnderlineSpan(), start, start + ch.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         return sb
-    }
-
-    private fun speechError(code: Int): String = when (code) {
-        SpeechRecognizer.ERROR_AUDIO -> "Problème audio."
-        SpeechRecognizer.ERROR_CLIENT -> "Erreur interne de reconnaissance."
-        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Permission micro manquante."
-        SpeechRecognizer.ERROR_NETWORK -> "Pas de réseau pour la reconnaissance vocale."
-        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Réseau trop lent."
-        SpeechRecognizer.ERROR_NO_MATCH -> "Je n'ai pas compris. Réessaie, lettre par lettre."
-        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Reconnaissance occupée, réessaie."
-        SpeechRecognizer.ERROR_SERVER -> "Erreur du serveur de reconnaissance."
-        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Je n'ai rien entendu."
-        else -> "Erreur de reconnaissance ($code)."
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
