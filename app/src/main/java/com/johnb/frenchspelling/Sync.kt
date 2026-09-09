@@ -19,8 +19,8 @@ import kotlin.random.Random
  */
 object Sync {
 
-    /** e.g. "https://dictee-sync.johnb.workers.dev" — no trailing slash. Empty = feature hidden. */
-    const val SYNC_BASE_URL = ""
+    /** No trailing slash. Empty = feature hidden. */
+    const val SYNC_BASE_URL = "https://dictee-sync.johnboniello.workers.dev"
 
     val isConfigured: Boolean get() = SYNC_BASE_URL.isNotBlank()
 
