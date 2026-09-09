@@ -17,26 +17,32 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:baselineAligned="false"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/listenBtn"
+            style="@style/Widget.Dictee.Button.Blue"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:text="🔊  Écouter" />
 
         <Button
             android:id="@+id/hintBtn"
+            style="@style/Widget.Dictee.Button.Gold"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:text="💡  Indice" />
 
         <Button
             android:id="@+id/spellBtn"
+            style="@style/Widget.Dictee.Button.BluePale"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:text="🔊  Épeler" />
     </LinearLayout>
@@ -48,7 +54,7 @@
         android:layout_weight="1"
         android:layout_marginTop="8dp"
         android:minHeight="320dp"
-        android:background="#FAFAFA" />
+        android:background="@drawable/board_bg" />
 
     <TextView
         android:id="@+id/feedbackView"
@@ -63,6 +69,7 @@
 
     <Button
         android:id="@+id/nextBtn"
+        style="@style/Widget.Dictee.Button.Blue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="➡️  Mot suivant"

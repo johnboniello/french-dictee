@@ -369,11 +369,13 @@ class ScrambleActivity : AppCompatActivity() {
             if (hintUsedThisWord) aided++ else score++
             progressView.text = progressText()
             Feedback.correct(this, tts, ttsReady)
+            Celebrate.correct(this)
             nextBtn.visibility = View.VISIBLE
         } else {
             feedbackView.setTextColor(red)
             feedbackView.text = "Pas tout à fait — les lettres en rouge reviennent."
             Feedback.wrong(this, tts, ttsReady)
+            Celebrate.reset()
             for (i in slotChars.indices) {
                 val t = slotFilledBy[i] ?: continue
                 if (!sameLetter(t.letter, slotChars[i])) {

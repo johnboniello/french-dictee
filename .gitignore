@@ -8,6 +8,8 @@ local.properties
 /Screenshot_*.jpg
 /Screenshot_*.png
 /Gemini_Generated_Image_*.png
+/rooster_mascot_transparent.png
+/french_dictee_home_tricolor_palette.html
 
 # Signing — never commit these; back them up somewhere safe
 /keystore/

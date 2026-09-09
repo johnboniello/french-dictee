@@ -320,6 +320,7 @@ class MainActivity : AppCompatActivity() {
             nextBtn.visibility = View.VISIBLE
             progressView.text = progressText()
             Feedback.correct(this, tts, ttsReady)
+            Celebrate.correct(this)
         } else {
             attempts++
             if (!answerRevealed) answerRow.visibility = View.GONE
@@ -331,6 +332,7 @@ class MainActivity : AppCompatActivity() {
                 if (attempts >= revealThreshold && !answerRevealed) View.VISIBLE else View.GONE
             nextBtn.visibility = View.VISIBLE
             Feedback.wrong(this, tts, ttsReady)
+            Celebrate.reset()
         }
         resultBox.visibility = View.VISIBLE
     }

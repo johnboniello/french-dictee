@@ -36,9 +36,11 @@ class ChoiceActivity : AppCompatActivity() {
     private var solved = false
     private var wrongThisWord = false
 
-    private val blue = 0xFF1565C0.toInt()
+    private val optIdle = 0xFFB5D4F4.toInt()
+    private val optIdleText = 0xFF042C53.toInt()
     private val green = 0xFF2E7D32.toInt()
     private val red = 0xFFC62828.toInt()
+    private val onStrong = 0xFFFFFFFF.toInt()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -139,7 +141,8 @@ class ChoiceActivity : AppCompatActivity() {
         for (i in options.indices) {
             options[i].text = choices[i]
             options[i].isEnabled = true
-            options[i].backgroundTintList = ColorStateList.valueOf(blue)
+            options[i].backgroundTintList = ColorStateList.valueOf(optIdle)
+            options[i].setTextColor(optIdleText)
         }
         progressView.text = "Mot ${pos + 1} / ${order.size}     Score : $score" +
             (if (aided > 0) "   ·   avec aide : $aided" else "")
@@ -151,6 +154,7 @@ class ChoiceActivity : AppCompatActivity() {
         if (i == correctIndex) {
             solved = true
             options[i].backgroundTintList = ColorStateList.valueOf(green)
+            options[i].setTextColor(onStrong)
             for (b in options) b.isEnabled = false
             feedbackView.setTextColor(green)
             feedbackView.text = if (wrongThisWord) "Bravo ! (avec aide)" else "Bravo ! 🎉"
@@ -158,14 +162,17 @@ class ChoiceActivity : AppCompatActivity() {
             progressView.text = "Mot ${pos + 1} / ${order.size}     Score : $score" +
                 (if (aided > 0) "   ·   avec aide : $aided" else "")
             Feedback.correct(this, tts, ttsReady)
+            Celebrate.correct(this)
             nextBtn.visibility = View.VISIBLE
         } else {
             wrongThisWord = true
             options[i].isEnabled = false
             options[i].backgroundTintList = ColorStateList.valueOf(red)
+            options[i].setTextColor(onStrong)
             feedbackView.setTextColor(red)
             feedbackView.text = "Essaie encore."
             Feedback.wrong(this, tts, ttsReady)
+            Celebrate.reset()
         }
     }
 

@@ -1,0 +1,12 @@
+# Cloudflare Workers config for the Dictée FR sync API.
+# Deploy with:  npx wrangler deploy   (or paste worker.js into the dashboard).
+
+name = "dictee-sync"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Create the namespace once:  npx wrangler kv namespace create LISTS
+# then paste the printed id below.
+[[kv_namespaces]]
+binding = "LISTS"
+id = "PASTE_KV_NAMESPACE_ID_HERE"

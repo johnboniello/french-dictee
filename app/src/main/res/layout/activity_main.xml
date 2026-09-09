@@ -45,6 +45,7 @@
 
             <Button
                 android:id="@+id/listenBtn"
+                style="@style/Widget.Dictee.Button.Blue"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingTop="16dp"
@@ -63,19 +64,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:baselineAligned="false"
                 android:orientation="horizontal">
 
                 <Button
                     android:id="@+id/hintBtn"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:text="💡  Indice" />
 
                 <Button
                     android:id="@+id/spellBtn"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:text="🔊  Épeler lentement"
                     android:textAllCaps="false" />
@@ -86,7 +89,7 @@
                 android:layout_height="1dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="16dp"
-                android:background="#DDDDDD" />
+                android:background="@color/divider" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -128,12 +131,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
+                android:baselineAligned="false"
                 android:orientation="horizontal">
 
                 <Button
                     android:id="@+id/backspaceBtn"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:text="⌫  Une lettre"
                     android:textAllCaps="false" />
@@ -141,7 +145,8 @@
                 <Button
                     android:id="@+id/clearBtn"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:text="Tout effacer"
                     android:textAllCaps="false" />
@@ -149,6 +154,7 @@
 
             <Button
                 android:id="@+id/checkBtn"
+                style="@style/Widget.Dictee.Button.Gold"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
@@ -224,7 +230,7 @@
                     <Button
                         android:id="@+id/hearAnswerBtn"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:text="🔊  Écouter"
                         android:textAllCaps="false"
@@ -233,7 +239,8 @@
                     <Button
                         android:id="@+id/retryBtn"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="6dp"
                         android:layout_weight="1"
                         android:text="↺  Réessayer"
                         android:textAllCaps="false"
@@ -242,7 +249,8 @@
                     <Button
                         android:id="@+id/revealAnswerBtn"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="6dp"
                         android:layout_weight="1"
                         android:text="👁  Réponse"
                         android:textAllCaps="false"
@@ -252,7 +260,8 @@
                     <Button
                         android:id="@+id/nextBtn"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="6dp"
                         android:layout_weight="1"
                         android:text="➡️  Suivant"
                         android:textAllCaps="false"

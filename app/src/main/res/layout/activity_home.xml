@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -11,20 +12,45 @@
         android:gravity="center_horizontal"
         android:padding="20dp">
 
+        <FrameLayout
+            android:layout_width="88dp"
+            android:layout_height="88dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/mascot_ring">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:contentDescription="Mascotte : le coq"
+                android:src="@drawable/mascot_rooster" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="10dp"
+            android:paddingBottom="2dp"
+            android:text="Dictée"
+            android:textColor="@color/navy"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="8dp"
+            android:paddingTop="12dp"
             android:paddingBottom="4dp"
             android:text="Choisis un jeu"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textColor="@color/ink_soft"
+            android:textSize="16sp" />
 
         <Button
             android:id="@+id/scrambleBtn"
+            style="@style/Widget.Dictee.Button.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="14dp"
             android:paddingTop="18dp"
             android:paddingBottom="18dp"
             android:text="🔤  Lettres mélangées"
@@ -32,6 +58,7 @@
 
         <Button
             android:id="@+id/choiceBtn"
+            style="@style/Widget.Dictee.Button.Red"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
@@ -42,6 +69,7 @@
 
         <Button
             android:id="@+id/dictationBtn"
+            style="@style/Widget.Dictee.Button.Gold"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
@@ -55,10 +83,11 @@
             android:layout_height="1dp"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="16dp"
-            android:background="#DDDDDD" />
+            android:background="@color/divider" />
 
         <Button
             android:id="@+id/wordsBtn"
+            style="@style/Widget.Dictee.Button.BluePale"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
@@ -66,6 +95,7 @@
 
         <Button
             android:id="@+id/scanBtn"
+            style="@style/Widget.Dictee.Button.RedPale"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -78,6 +108,7 @@
             android:paddingTop="16dp"
             android:gravity="center"
             android:text=""
+            android:textColor="@color/ink_soft"
             android:textSize="14sp" />
     </LinearLayout>
 </ScrollView>

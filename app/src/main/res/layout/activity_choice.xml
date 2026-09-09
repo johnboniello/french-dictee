@@ -22,6 +22,7 @@
 
         <Button
             android:id="@+id/listenBtn"
+            style="@style/Widget.Dictee.Button.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="16dp"
@@ -106,6 +107,7 @@
 
         <Button
             android:id="@+id/nextBtn"
+            style="@style/Widget.Dictee.Button.Blue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="➡️  Mot suivant"

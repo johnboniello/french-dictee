@@ -28,6 +28,7 @@
 
         <Button
             android:id="@+id/addBtn"
+            style="@style/Widget.Dictee.Button.Gold"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -35,17 +36,96 @@
 
         <Button
             android:id="@+id/scanBtn"
+            style="@style/Widget.Dictee.Button.RedPale"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="📷  Scanner une liste (photo)" />
+
+        <LinearLayout
+            android:id="@+id/syncCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/card"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔗  Partager la liste entre téléphones"
+                android:textColor="@color/navy"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:text="Crée un code, puis saisis le même code sur l'autre téléphone et appuie sur Synchroniser."
+                android:textColor="@color/ink_soft"
+                android:textSize="13sp" />
+
+            <EditText
+                android:id="@+id/codeInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="code famille"
+                android:inputType="textNoSuggestions"
+                android:maxLines="1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/genCodeBtn"
+                    style="@style/Widget.Dictee.Button.BluePale"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="🎲  Générer" />
+
+                <Button
+                    android:id="@+id/shareCodeBtn"
+                    style="@style/Widget.Dictee.Button.BluePale"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="📤  Envoyer" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/syncBtn"
+                style="@style/Widget.Dictee.Button.Blue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="🔄  Synchroniser maintenant" />
+
+            <TextView
+                android:id="@+id/syncStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="6dp"
+                android:text=""
+                android:textColor="@color/ink_soft"
+                android:textSize="13sp" />
+        </LinearLayout>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"
-            android:background="#DDDDDD" />
+            android:background="@color/divider" />
 
         <TextView
             android:id="@+id/countView"
