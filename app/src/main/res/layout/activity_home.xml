@@ -75,8 +75,20 @@
             android:layout_marginTop="12dp"
             android:paddingTop="18dp"
             android:paddingBottom="18dp"
-            android:text="✏️  Dictée sur papier"
+            android:text="✏️  Écris le mot"
             android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/reviewBtn"
+            style="@style/Widget.Dictee.Button.BluePale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp"
+            android:text="🔁  Mots à revoir"
+            android:textSize="17sp"
+            android:visibility="gone" />
 
         <View
             android:layout_width="match_parent"

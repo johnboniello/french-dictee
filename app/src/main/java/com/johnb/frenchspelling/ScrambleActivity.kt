@@ -54,7 +54,10 @@ class ScrambleActivity : AppCompatActivity() {
     private var tileSize = 0
     private var gap = 0
     private var hintUsedThisWord = false
+    private var wrongThisWord = false
     private var solvedThisWord = false
+
+    private val reviewMode by lazy { intent.getBooleanExtra(HomeActivity.EXTRA_REVIEW, false) }
 
     private var dragTile: Tile? = null
     private var downX = 0f
@@ -68,7 +71,7 @@ class ScrambleActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scramble)
-        supportActionBar?.title = "Lettres mélangées"
+        supportActionBar?.title = if (reviewMode) "Lettres mélangées — révision" else "Lettres mélangées"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         store = WordStore(this)
@@ -96,13 +99,16 @@ class ScrambleActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        val latest = store.words()
+        if (!order.isEmpty() && reviewMode) return
+        val latest = if (reviewMode) Stats.poolWords(store).toMutableList() else store.words()
         if (latest != words || order.isEmpty()) {
             words = latest
             if (words.isEmpty()) {
                 board.removeAllViews()
                 progressView.text = ""
-                feedbackView.text = "Ajoute d'abord des mots (« Gérer les mots »)."
+                feedbackView.text =
+                    if (reviewMode) "Aucun mot à revoir pour l'instant. 🎉"
+                    else "Ajoute d'abord des mots (« Gérer les mots »)."
                 nextBtn.visibility = View.GONE
                 order = mutableListOf()
                 return
@@ -148,6 +154,7 @@ class ScrambleActivity : AppCompatActivity() {
         feedbackView.text = ""
         nextBtn.visibility = View.GONE
         hintUsedThisWord = false
+        wrongThisWord = false
         solvedThisWord = false
 
         val target = currentWord()
@@ -368,10 +375,12 @@ class ScrambleActivity : AppCompatActivity() {
             feedbackView.text = if (hintUsedThisWord) "Bravo ! (avec aide)" else "Bravo ! 🎉"
             if (hintUsedThisWord) aided++ else score++
             progressView.text = progressText()
+            Stats.record(store, currentWord(), wrongThisWord)
             Feedback.correct(this, tts, ttsReady)
             Celebrate.correct(this)
             nextBtn.visibility = View.VISIBLE
         } else {
+            wrongThisWord = true
             feedbackView.setTextColor(red)
             feedbackView.text = "Pas tout à fait — les lettres en rouge reviennent."
             Feedback.wrong(this, tts, ttsReady)

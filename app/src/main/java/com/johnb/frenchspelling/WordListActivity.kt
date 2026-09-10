@@ -13,7 +13,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
-/** Parent screen: enter, paste, and delete the practice words. */
+/** Parent screen: enter/replace the weekly words, manage "Mots à revoir", sync. */
 class WordListActivity : AppCompatActivity() {
 
     private lateinit var store: WordStore
@@ -21,6 +21,10 @@ class WordListActivity : AppCompatActivity() {
     private lateinit var listContainer: LinearLayout
     private lateinit var countView: TextView
     private val items = mutableListOf<String>()
+
+    private lateinit var reviewCard: View
+    private lateinit var reviewHeading: TextView
+    private lateinit var reviewContainer: LinearLayout
 
     private lateinit var syncCard: LinearLayout
     private lateinit var codeInput: EditText
@@ -38,9 +42,19 @@ class WordListActivity : AppCompatActivity() {
         input = findViewById(R.id.input)
         listContainer = findViewById(R.id.listContainer)
         countView = findViewById(R.id.countView)
-        findViewById<Button>(R.id.addBtn).setOnClickListener { onAdd() }
+        reviewCard = findViewById(R.id.reviewCard)
+        reviewHeading = findViewById(R.id.reviewHeading)
+        reviewContainer = findViewById(R.id.reviewContainer)
+
+        findViewById<Button>(R.id.addBtn).setOnClickListener { onAdd(replace = false) }
+        findViewById<Button>(R.id.replaceBtn).setOnClickListener { onAdd(replace = true) }
         findViewById<Button>(R.id.scanBtn).setOnClickListener {
             startActivity(Intent(this, ScanActivity::class.java))
+        }
+        findViewById<Button>(R.id.reviewCleanBtn).setOnClickListener {
+            val n = Stats.clearMastered(store)
+            renderReview()
+            toast(if (n > 0) "$n mot(s) retiré(s)." else "Rien à retirer.")
         }
 
         setupSync()
@@ -48,6 +62,7 @@ class WordListActivity : AppCompatActivity() {
         items.clear()
         items.addAll(store.words())
         redraw()
+        renderReview()
     }
 
     override fun onResume() {
@@ -58,6 +73,7 @@ class WordListActivity : AppCompatActivity() {
             items.addAll(latest)
             redraw()
         }
+        renderReview()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -68,13 +84,37 @@ class WordListActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun onAdd() {
+    private fun onAdd(replace: Boolean) {
         val parts = input.text.toString()
             .split(Regex("[\\n,;]+"))
             .map { it.trim() }
             .filter { it.isNotEmpty() }
         if (parts.isEmpty()) {
             toast("Écris au moins un mot.")
+            return
+        }
+        if (replace) {
+            AlertDialog.Builder(this)
+                .setTitle("Nouvelle semaine")
+                .setMessage("Remplacer la liste par ces ${parts.size} mots ?\n\nLes « Mots à revoir » sont gardés.")
+                .setPositiveButton("Remplacer") { _, _ ->
+                    Stats.prune(store)
+                    val uniq = ArrayList<String>()
+                    val seen = HashSet<String>()
+                    for (p in parts) if (seen.add(p.lowercase())) uniq.add(p)
+                    items.clear()
+                    items.addAll(uniq)
+                    store.replaceWords(uniq)
+                    input.setText("")
+                    redraw()
+                    renderReview()
+                    AlertDialog.Builder(this)
+                        .setMessage("Nouvelle liste : ${uniq.size} mots.\nMots à revoir : ${Stats.dueCount(store)}.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+                .setNegativeButton("Annuler", null)
+                .show()
             return
         }
         var added = 0
@@ -103,31 +143,83 @@ class WordListActivity : AppCompatActivity() {
             else -> "${items.size} mots"
         }
         listContainer.removeAllViews()
-        val pad = dp(6)
         items.forEachIndexed { index, word ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, pad, 0, pad)
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-            }
-            val label = TextView(this).apply {
-                text = word
-                textSize = 18f
-                layoutParams = LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-                )
-            }
-            val del = Button(this).apply {
+            listContainer.addView(wordRow(word, deletable = true, index = index))
+        }
+    }
+
+    private fun renderReview() {
+        val list = Stats.listForManage(store)
+        reviewCard.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
+        reviewHeading.text = "🔁  Mots à revoir (${list.size})"
+        reviewContainer.removeAllViews()
+        for (it in list) {
+            reviewContainer.addView(reviewRow(it))
+        }
+    }
+
+    private fun rowFrame(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        setPadding(0, dp(6), 0, dp(6))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+    }
+
+    private fun wordRow(word: String, deletable: Boolean, index: Int): View {
+        val row = rowFrame()
+        row.addView(TextView(this).apply {
+            text = word
+            textSize = 18f
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        row.addView(pinButton(word))
+        if (deletable) {
+            row.addView(Button(this).apply {
                 text = "Supprimer"
                 isAllCaps = false
                 setOnClickListener { removeAt(index) }
+            })
+        }
+        return row
+    }
+
+    private fun reviewRow(item: Stats.ManageItem): View {
+        val row = rowFrame()
+        row.addView(TextView(this).apply {
+            text = item.text
+            textSize = 18f
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        row.addView(TextView(this).apply {
+            text = Stats.boxDots(item.box)
+            textSize = 13f
+            setPadding(dp(6), 0, dp(6), 0)
+            setTextColor(0xFF0C447C.toInt())
+        })
+        row.addView(Button(this).apply {
+            text = "✓"
+            isAllCaps = false
+            minWidth = 0
+            setOnClickListener {
+                Stats.master(store, item.text)
+                renderReview()
             }
-            row.addView(label)
-            row.addView(del)
-            listContainer.addView(row)
+        })
+        row.addView(pinButton(item.text))
+        return row
+    }
+
+    private fun pinButton(word: String): Button = Button(this).apply {
+        text = "📌"
+        isAllCaps = false
+        minWidth = 0
+        alpha = if (Stats.isPinned(store, word)) 1f else 0.35f
+        setOnClickListener {
+            Stats.setPinned(store, word, !Stats.isPinned(store, word))
+            redraw()
+            renderReview()
         }
     }
 
@@ -197,53 +289,20 @@ class WordListActivity : AppCompatActivity() {
         syncBtn.isEnabled = false
         setSyncStatus("Synchronisation…")
 
-        Sync.pull(code) { result ->
+        Sync.syncAll(store, code) { result ->
+            syncing = false
+            syncBtn.isEnabled = true
             when (result) {
-                is Sync.Result.Error -> finishSync("Échec : ${result.message}")
-                is Sync.Result.Empty -> {
-                    val now = System.currentTimeMillis()
-                    Sync.push(code, items.toList(), now) { r ->
-                        when (r) {
-                            is Sync.Result.Ok -> {
-                                store.markSyncedNow()
-                                finishSync("Envoyé ${items.size} mot(s). Saisis « $code » sur l'autre téléphone.")
-                            }
-                            is Sync.Result.Error -> finishSync("Échec de l'envoi : ${r.message}")
-                            else -> finishSync("Échec de l'envoi.")
-                        }
-                    }
-                }
                 is Sync.Result.Ok -> {
-                    val remote = result.remote
-                    val merged = Sync.merge(items.toList(), remote.words)
-                    val received = merged.size - items.size
-                    val now = System.currentTimeMillis()
                     items.clear()
-                    items.addAll(merged)
-                    store.saveFromSync(merged, now)
+                    items.addAll(store.words())
                     redraw()
-                    Sync.push(code, merged, now) { r ->
-                        when (r) {
-                            is Sync.Result.Ok -> {
-                                store.markSyncedNow()
-                                finishSync(
-                                    if (received > 0) "À jour : ${merged.size} mot(s) (+$received reçu(s))."
-                                    else "À jour : ${merged.size} mot(s)."
-                                )
-                            }
-                            is Sync.Result.Error -> finishSync("Fusionné, mais l'envoi a échoué : ${r.message}")
-                            else -> finishSync("Fusionné localement.")
-                        }
-                    }
+                    renderReview()
+                    setSyncStatus(result.message)
                 }
+                is Sync.Result.Error -> setSyncStatus("Échec : ${result.message}")
             }
         }
-    }
-
-    private fun finishSync(message: String) {
-        syncing = false
-        syncBtn.isEnabled = true
-        setSyncStatus(message)
     }
 
     private fun setSyncStatus(message: String) {

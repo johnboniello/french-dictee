@@ -33,10 +33,13 @@ class MainActivity : AppCompatActivity() {
     private var aidedCount = 0
     private val guess = StringBuilder()
     private var scoredThisWord = false
+    private var recordedThisWord = false
     private var aidedThisWord = false
     private var revealCount = 0
     private var attempts = 0
     private var answerRevealed = false
+
+    private val reviewMode by lazy { intent.getBooleanExtra(HomeActivity.EXTRA_REVIEW, false) }
 
     private lateinit var emptyView: TextView
     private lateinit var emptyAddBtn: Button
@@ -71,7 +74,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        supportActionBar?.title = "Dictée sur papier"
+        supportActionBar?.title = if (reviewMode) "Écris le mot — révision" else "Écris le mot"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         store = WordStore(this)
@@ -140,10 +143,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        val latest = store.words()
-        if (latest != words || order.isEmpty()) {
-            words = latest
-            initRound()
+        if (order.isEmpty() || !reviewMode) {
+            val latest = if (reviewMode) Stats.poolWords(store).toMutableList() else store.words()
+            if (order.isEmpty() || latest != words) {
+                words = latest
+                initRound()
+            }
         }
     }
 
@@ -175,6 +180,7 @@ class MainActivity : AppCompatActivity() {
         guess.clear()
         resultBox.visibility = View.GONE
         scoredThisWord = false
+        recordedThisWord = false
         aidedThisWord = false
         revealCount = 0
         attempts = 0
@@ -184,8 +190,11 @@ class MainActivity : AppCompatActivity() {
         aidedCount = 0
 
         if (words.isEmpty()) {
+            emptyView.text =
+                if (reviewMode) "Aucun mot à revoir pour l'instant. 🎉"
+                else "Aucun mot pour l'instant. Ajoute les mots de la dictée pour commencer."
             emptyView.visibility = View.VISIBLE
-            emptyAddBtn.visibility = View.VISIBLE
+            emptyAddBtn.visibility = if (reviewMode) View.GONE else View.VISIBLE
             practiceBox.visibility = View.GONE
             return
         }
@@ -202,6 +211,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun render() {
         revealCount = 0
+        recordedThisWord = false
         aidedThisWord = false
         attempts = 0
         answerRevealed = false
@@ -319,6 +329,10 @@ class MainActivity : AppCompatActivity() {
             revealAnswerBtn.visibility = View.GONE
             nextBtn.visibility = View.VISIBLE
             progressView.text = progressText()
+            if (!recordedThisWord) {
+                Stats.record(store, currentWord(), attempts > 0 || answerRevealed)
+                recordedThisWord = true
+            }
             Feedback.correct(this, tts, ttsReady)
             Celebrate.correct(this)
         } else {
@@ -348,6 +362,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun nextWord() {
+        if (!recordedThisWord && attempts > 0) {
+            Stats.record(store, currentWord(), true)
+            recordedThisWord = true
+        }
         if (pos + 1 >= order.size) {
             showEndDialog()
             return

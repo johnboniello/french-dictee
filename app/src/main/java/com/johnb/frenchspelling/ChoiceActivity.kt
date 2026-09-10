@@ -36,6 +36,8 @@ class ChoiceActivity : AppCompatActivity() {
     private var solved = false
     private var wrongThisWord = false
 
+    private val reviewMode by lazy { intent.getBooleanExtra(HomeActivity.EXTRA_REVIEW, false) }
+
     private val optIdle = 0xFFB5D4F4.toInt()
     private val optIdleText = 0xFF042C53.toInt()
     private val green = 0xFF2E7D32.toInt()
@@ -45,7 +47,7 @@ class ChoiceActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_choice)
-        supportActionBar?.title = "Le bon mot"
+        supportActionBar?.title = if (reviewMode) "Le bon mot — révision" else "Le bon mot"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         store = WordStore(this)
@@ -75,10 +77,12 @@ class ChoiceActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        val latest = store.words()
+        if (order.isNotEmpty() && reviewMode) return
+        val latest = if (reviewMode) Stats.poolWords(store).toMutableList() else store.words()
         if (latest != words || order.isEmpty()) {
             words = latest
             if (words.isEmpty()) {
+                if (reviewMode) emptyView.text = "Aucun mot à revoir pour l'instant. 🎉"
                 showEmpty(true)
                 order = mutableListOf()
                 return
@@ -161,6 +165,7 @@ class ChoiceActivity : AppCompatActivity() {
             if (wrongThisWord) aided++ else score++
             progressView.text = "Mot ${pos + 1} / ${order.size}     Score : $score" +
                 (if (aided > 0) "   ·   avec aide : $aided" else "")
+            Stats.record(store, currentWord(), wrongThisWord)
             Feedback.correct(this, tts, ttsReady)
             Celebrate.correct(this)
             nextBtn.visibility = View.VISIBLE

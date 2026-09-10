@@ -3,7 +3,7 @@ package com.johnb.frenchspelling
 import android.content.Context
 import org.json.JSONArray
 
-/** Persists the practice word list and voice settings in SharedPreferences. */
+/** Persists the practice word list, review stats, and voice settings in SharedPreferences. */
 class WordStore(context: Context) {
 
     private val prefs = context.getSharedPreferences("french_spelling", Context.MODE_PRIVATE)
@@ -20,26 +20,56 @@ class WordStore(context: Context) {
 
     /** Local edit: save and stamp "now" so sync knows this device is ahead. */
     fun save(list: List<String>) {
-        writeWords(list, System.currentTimeMillis())
+        writeWords(list, System.currentTimeMillis(), wordsReplacedAt())
     }
 
-    /** Sync adopted a list from the server: save it with the server's timestamp. */
-    fun saveFromSync(list: List<String>, updatedAt: Long) {
-        writeWords(list, updatedAt)
+    /** "Nouvelle semaine": replace the whole list and mark a new generation. */
+    fun replaceWords(list: List<String>) {
+        val now = System.currentTimeMillis()
+        writeWords(list, now, now)
+    }
+
+    /** Sync adopted a list from the server: save it with the server's timestamps. */
+    fun saveFromSync(list: List<String>, updatedAt: Long, replacedAt: Long) {
+        writeWords(list, updatedAt, replacedAt)
         prefs.edit().putLong(KEY_SYNCED_AT, System.currentTimeMillis()).apply()
     }
 
-    private fun writeWords(list: List<String>, updatedAt: Long) {
+    private fun writeWords(list: List<String>, updatedAt: Long, replacedAt: Long) {
         val arr = JSONArray()
         for (w in list) arr.put(w)
         prefs.edit()
             .putString(KEY_WORDS, arr.toString())
             .putLong(KEY_WORDS_AT, updatedAt)
+            .putLong(KEY_WORDS_REPLACED_AT, replacedAt)
             .apply()
     }
 
     /** When the local list was last changed (epoch millis). 0 if never. */
     fun wordsUpdatedAt(): Long = prefs.getLong(KEY_WORDS_AT, 0L)
+
+    /** When "Nouvelle semaine" last replaced the list (epoch millis). 0 if never. */
+    fun wordsReplacedAt(): Long = prefs.getLong(KEY_WORDS_REPLACED_AT, 0L)
+
+    // ---- review stats ("Mots à revoir") ----
+
+    fun stats(): MutableMap<String, Stats.Entry> = Stats.fromJson(prefs.getString(KEY_STATS, null))
+
+    fun saveStats(map: Map<String, Stats.Entry>) {
+        prefs.edit()
+            .putString(KEY_STATS, Stats.toJson(map))
+            .putLong(KEY_STATS_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    fun saveStatsFromSync(map: Map<String, Stats.Entry>, updatedAt: Long) {
+        prefs.edit()
+            .putString(KEY_STATS, Stats.toJson(map))
+            .putLong(KEY_STATS_AT, updatedAt)
+            .apply()
+    }
+
+    fun statsUpdatedAt(): Long = prefs.getLong(KEY_STATS_AT, 0L)
 
     /** When this device last completed a sync (epoch millis). 0 if never. */
     fun lastSyncedAt(): Long = prefs.getLong(KEY_SYNCED_AT, 0L)
@@ -68,6 +98,9 @@ class WordStore(context: Context) {
     companion object {
         private const val KEY_WORDS = "words"
         private const val KEY_WORDS_AT = "words_updated_at"
+        private const val KEY_WORDS_REPLACED_AT = "words_replaced_at"
+        private const val KEY_STATS = "review_stats"
+        private const val KEY_STATS_AT = "review_stats_at"
         private const val KEY_SYNCED_AT = "last_synced_at"
         private const val KEY_CODE = "family_code"
         private const val KEY_RATE = "rate"

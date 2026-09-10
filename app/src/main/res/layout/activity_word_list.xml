@@ -26,13 +26,30 @@
             android:inputType="textMultiLine|textNoSuggestions"
             android:minLines="2" />
 
-        <Button
-            android:id="@+id/addBtn"
-            style="@style/Widget.Dictee.Button.Gold"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Ajouter" />
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/addBtn"
+                style="@style/Widget.Dictee.Button.Gold"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="➕  Ajouter" />
+
+            <Button
+                android:id="@+id/replaceBtn"
+                style="@style/Widget.Dictee.Button.BluePale"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="🗓️  Nouvelle semaine" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/scanBtn"
@@ -41,6 +58,49 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="📷  Scanner une liste (photo)" />
+
+        <LinearLayout
+            android:id="@+id/reviewCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/card"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/reviewHeading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔁  Mots à revoir"
+                android:textColor="@color/navy"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:text="Les mots qu'elle rate reviennent ici jusqu'à ce qu'elle les réussisse plusieurs fois."
+                android:textColor="@color/ink_soft"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:id="@+id/reviewContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="vertical" />
+
+            <Button
+                android:id="@+id/reviewCleanBtn"
+                style="@style/Widget.Dictee.Button.BluePale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="🧹  Retirer les mots maîtrisés" />
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/syncCard"

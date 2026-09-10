@@ -7,10 +7,18 @@ generates for you.
 
 ## What it stores
 
-`KV` key `list:<code>` → `{"words": ["école", "jeudi", ...], "updatedAt": 1725900000000}`
+- `list:<code>` → `{"words": ["école", ...], "updatedAt": <ms>, "replacedAt": <ms>}`
+- `stats:<code>` → `{"stats": {"<word>": {box, seen, miss, lastMissAt, pinned, text}}, "updatedAt": <ms>}`
+  (the "Mots à revoir" practice data)
 
 - `<code>` must match `^[a-z0-9-]{4,40}$`
-- lists are capped at 500 words × 40 chars
+- lists cap at 500 words × 40 chars; stats cap at 3000 entries
+
+## Updating the worker
+
+When `worker.js` changes here (e.g. the stats endpoint was added after the first
+deploy), open the worker in the Cloudflare dashboard → **Edit code**, paste the
+new `worker.js`, **Save and deploy**. The KV binding and URL stay the same.
 
 ## Deploy (no Node needed — dashboard route)
 
