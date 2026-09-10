@@ -74,6 +74,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        padForSystemBars()
         supportActionBar?.title = if (reviewMode) "Écris le mot — révision" else "Écris le mot"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 

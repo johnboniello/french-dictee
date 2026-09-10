@@ -71,6 +71,7 @@ class ScrambleActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scramble)
+        padForSystemBars()
         supportActionBar?.title = if (reviewMode) "Lettres mélangées — révision" else "Lettres mélangées"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 

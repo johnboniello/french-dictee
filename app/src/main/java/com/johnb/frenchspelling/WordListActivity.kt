@@ -35,6 +35,7 @@ class WordListActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_word_list)
+        padForSystemBars()
         supportActionBar?.title = "Gérer les mots"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 

@@ -15,14 +15,14 @@ val hasReleaseKeystore = keystoreProps.getProperty("storeFile")?.let { rootProje
 
 android {
     namespace = "com.johnb.frenchspelling"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.johnb.frenchspelling"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 5
-        versionName = "1.4"
+        targetSdk = 36
+        versionCode = 6
+        versionName = "1.5"
 
         // The bundled OCR model ships native libs for every ABI; real phones are ARM.
         // Dropping x86/x86_64 roughly halves the APK. (Re-add them for an emulator.)
@@ -73,8 +73,8 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.core:core-ktx:1.16.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.12.0")
     // On-device OCR for the "scan a word list" feature (bundled model, works offline).
     implementation("com.google.mlkit:text-recognition:16.0.1")
