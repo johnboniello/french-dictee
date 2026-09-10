@@ -7,6 +7,7 @@ import org.json.JSONObject
 import java.io.BufferedReader
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.SecureRandom
 import kotlin.random.Random
 
 /**
@@ -40,16 +41,22 @@ object Sync {
         "pomme", "poire", "prune", "fleur", "arbre", "livre", "craie", "stylo"
     )
 
+    private const val ALNUM = "abcdefghijklmnopqrstuvwxyz0123456789"
+    private val secure = SecureRandom()
+
+    /** A readable prefix so a parent recognises "their" code, plus 6 random
+     *  chars so it isn't guessable: e.g. "coq-bleu-h7k2m9" (~40 bits). */
     fun newCode(): String {
         val a = ADJ[Random.nextInt(ADJ.size)]
         val n = NOUN[Random.nextInt(NOUN.size)]
-        return "$n-$a-${Random.nextInt(1000, 10000)}"
+        val rand = buildString { repeat(6) { append(ALNUM[secure.nextInt(ALNUM.length)]) } }
+        return "$n-$a-$rand"
     }
 
     fun normalizeCode(raw: String): String =
         raw.trim().lowercase().replace(Regex("[^a-z0-9-]"), "")
 
-    fun isValidCode(code: String): Boolean = Regex("^[a-z0-9-]{4,40}$").matches(code)
+    fun isValidCode(code: String): Boolean = Regex("^[a-z0-9-]{8,40}$").matches(code)
 
     /** Pull + merge + push both list and stats. One background pass, one result. */
     fun syncAll(store: WordStore, code: String, onResult: (Result) -> Unit) {

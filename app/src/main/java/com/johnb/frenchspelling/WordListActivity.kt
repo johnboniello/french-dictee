@@ -280,7 +280,7 @@ class WordListActivity : AppCompatActivity() {
         if (syncing) return
         val code = Sync.normalizeCode(codeInput.text.toString())
         if (!Sync.isValidCode(code)) {
-            setSyncStatus("Code invalide : 4 à 40 lettres, chiffres ou tirets.")
+            setSyncStatus("Code invalide : 8 à 40 lettres, chiffres ou tirets.")
             return
         }
         codeInput.setText(code)
