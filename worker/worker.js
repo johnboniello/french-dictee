@@ -3,9 +3,14 @@
  * per "family code". No accounts, no personal data — the code is the only key.
  * Deploy to Cloudflare Workers (free tier) with a KV namespace bound as `LISTS`.
  *
- *   GET  /list/<code>   -> { words:[...], updatedAt:<ms>, replacedAt:<ms> }  (200)
+ *   GET  /list/<code>   -> { words:[...], deleted:[...], updatedAt:<ms>, replacedAt:<ms> }  (200)
  *                         { }                                                 (404, never synced)
- *   PUT  /list/<code>   body: { words:[...], updatedAt:<ms>, replacedAt:<ms> }
+ *   PUT  /list/<code>   body: { words:[...], deleted:[...], updatedAt:<ms>, replacedAt:<ms> }
+ *
+ * `deleted` is the tombstone list: words a device removed one at a time
+ * (not via a "new week" replace). It merges by union across devices so a
+ * deletion made on one phone isn't silently resurrected by an older copy
+ * of the list still sitting on another phone or the server.
  *
  *   GET  /stats/<code>  -> { stats:{ "<word>": {box,seen,miss,lastMissAt,pinned,text} }, updatedAt } (200)
  *                         { }                                                                          (404)
@@ -38,23 +43,29 @@ function json(body, status = 200) {
 const num = (v, d = 0) => (Number.isFinite(v) ? Math.floor(v) : d);
 const clampInt = (v, lo, hi) => Math.min(hi, Math.max(lo, num(v, lo)));
 
-function sanitizeList(payload) {
-  if (typeof payload !== "object" || payload === null) return null;
-  if (!Array.isArray(payload.words)) return null;
+function sanitizeWordArray(raw) {
   const seen = new Set();
-  const words = [];
-  for (const w of payload.words) {
+  const out = [];
+  if (!Array.isArray(raw)) return out;
+  for (const w of raw) {
     if (typeof w !== "string") continue;
     const t = w.trim().slice(0, MAX_WORD_LEN);
     if (!t) continue;
     const key = t.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    words.push(t);
-    if (words.length >= MAX_WORDS) break;
+    out.push(t);
+    if (out.length >= MAX_WORDS) break;
   }
+  return out;
+}
+
+function sanitizeList(payload) {
+  if (typeof payload !== "object" || payload === null) return null;
+  if (!Array.isArray(payload.words)) return null;
   return {
-    words,
+    words: sanitizeWordArray(payload.words),
+    deleted: sanitizeWordArray(payload.deleted),
     updatedAt: num(payload.updatedAt, Date.now()),
     replacedAt: num(payload.replacedAt, 0),
   };

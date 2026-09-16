@@ -94,11 +94,13 @@ object Sync {
         val now = System.currentTimeMillis()
         val local = store.words()
         val localRep = store.wordsReplacedAt()
+        val localDeleted = store.deletedWords()
 
         val remote = httpGet("$SYNC_BASE_URL/list/$code")
         if (remote == null || !remote.has("words")) {
             httpPut("$SYNC_BASE_URL/list/$code", JSONObject().apply {
                 put("words", JSONArray(local))
+                put("deleted", JSONArray(localDeleted))
                 put("updatedAt", now)
                 put("replacedAt", localRep)
             })
@@ -106,30 +108,39 @@ object Sync {
         }
 
         val remoteWords = jsonToList(remote.optJSONArray("words"))
+        val remoteDeleted = jsonToList(remote.optJSONArray("deleted"))
         val remoteRep = remote.optLong("replacedAt", 0L)
 
         val merged: List<String>
+        val mergedDeleted: List<String>
         val replacedAt: Long
         var adopted = false
         when {
-            remoteRep > localRep -> {        // other device started a new week
+            remoteRep > localRep -> {        // other device started a new week: adopt it whole
                 merged = remoteWords
+                mergedDeleted = remoteDeleted
                 replacedAt = remoteRep
                 adopted = true
             }
-            localRep > remoteRep -> {        // this device started a new week
+            localRep > remoteRep -> {        // this device started a new week: its list wins
                 merged = local
+                mergedDeleted = localDeleted
                 replacedAt = localRep
             }
-            else -> {                        // same generation -> union
-                merged = union(local, remoteWords)
+            else -> {                        // same generation -> union, minus anything either
+                                              // device has explicitly deleted since
+                mergedDeleted = union(localDeleted, remoteDeleted)
+                val deletedKeys = mergedDeleted.map { it.lowercase() }.toHashSet()
+                merged = union(local, remoteWords).filter { it.lowercase() !in deletedKeys }
                 replacedAt = localRep
             }
         }
 
         store.saveFromSync(merged, now, replacedAt)
+        store.saveDeletedWordsFromSync(mergedDeleted)
         httpPut("$SYNC_BASE_URL/list/$code", JSONObject().apply {
             put("words", JSONArray(merged))
+            put("deleted", JSONArray(mergedDeleted))
             put("updatedAt", now)
             put("replacedAt", replacedAt)
         })

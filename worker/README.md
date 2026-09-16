@@ -7,7 +7,9 @@ generates for you.
 
 ## What it stores
 
-- `list:<code>` → `{"words": ["école", ...], "updatedAt": <ms>, "replacedAt": <ms>}`
+- `list:<code>` → `{"words": ["école", ...], "deleted": [...], "updatedAt": <ms>, "replacedAt": <ms>}`
+  (`deleted` is a tombstone list of words removed one at a time, so a deletion
+  made on one device isn't resurrected by an older copy on another)
 - `stats:<code>` → `{"stats": {"<word>": {box, seen, miss, lastMissAt, pinned, text}}, "updatedAt": <ms>}`
   (the "Mots à revoir" practice data)
 
