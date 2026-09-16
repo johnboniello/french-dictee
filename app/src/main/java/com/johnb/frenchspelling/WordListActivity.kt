@@ -12,6 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
 /** Parent screen: enter/replace the weekly words, manage "Mots à revoir", sync. */
 class WordListActivity : AppCompatActivity() {
@@ -30,6 +31,7 @@ class WordListActivity : AppCompatActivity() {
     private lateinit var codeInput: EditText
     private lateinit var syncBtn: Button
     private lateinit var syncStatus: TextView
+    private lateinit var swipeRefresh: SwipeRefreshLayout
     private var syncing = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +60,9 @@ class WordListActivity : AppCompatActivity() {
             toast(if (n > 0) "$n mot(s) retiré(s)." else "Rien à retirer.")
         }
 
+        swipeRefresh = findViewById(R.id.swipeRefresh)
+        swipeRefresh.setOnRefreshListener { onPullToRefresh() }
+
         setupSync()
 
         items.clear()
@@ -75,6 +80,7 @@ class WordListActivity : AppCompatActivity() {
             redraw()
         }
         renderReview()
+        autoSyncSilently()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -277,7 +283,6 @@ class WordListActivity : AppCompatActivity() {
     }
 
     private fun doSync() {
-        if (syncing) return
         val code = Sync.normalizeCode(codeInput.text.toString())
         if (!Sync.isValidCode(code)) {
             setSyncStatus("Code invalide : 8 à 40 lettres, chiffres ou tirets.")
@@ -285,14 +290,37 @@ class WordListActivity : AppCompatActivity() {
         }
         codeInput.setText(code)
         store.setFamilyCode(code)
+        runSync(minIntervalMs = 0L, showErrors = true)
+    }
 
+    /** Quiet auto-sync on app resume: only touches the UI on success, and is
+     *  skipped if we already synced very recently. */
+    private fun autoSyncSilently() {
+        if (!Sync.isValidCode(store.familyCode())) return
+        runSync(minIntervalMs = 20_000L, showErrors = false)
+    }
+
+    private fun onPullToRefresh() {
+        if (!Sync.isValidCode(store.familyCode())) {
+            swipeRefresh.isRefreshing = false
+            return
+        }
+        runSync(minIntervalMs = 0L, showErrors = true)
+    }
+
+    private fun runSync(minIntervalMs: Long, showErrors: Boolean) {
+        if (syncing) {
+            swipeRefresh.isRefreshing = false
+            return
+        }
         syncing = true
         syncBtn.isEnabled = false
-        setSyncStatus("Synchronisation…")
+        if (minIntervalMs == 0L) setSyncStatus("Synchronisation…")
 
-        Sync.syncAll(store, code) { result ->
+        val started = Sync.autoSync(store, minIntervalMs) { result ->
             syncing = false
             syncBtn.isEnabled = true
+            swipeRefresh.isRefreshing = false
             when (result) {
                 is Sync.Result.Ok -> {
                     items.clear()
@@ -301,8 +329,13 @@ class WordListActivity : AppCompatActivity() {
                     renderReview()
                     setSyncStatus(result.message)
                 }
-                is Sync.Result.Error -> setSyncStatus("Échec : ${result.message}")
+                is Sync.Result.Error -> if (showErrors) setSyncStatus("Échec : ${result.message}")
             }
+        }
+        if (!started) {
+            syncing = false
+            syncBtn.isEnabled = true
+            swipeRefresh.isRefreshing = false
         }
     }
 
