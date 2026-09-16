@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
 /** Landing screen: pick a game or manage the word list. */
 class HomeActivity : AppCompatActivity() {
@@ -13,6 +14,8 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var store: WordStore
     private lateinit var countView: TextView
     private lateinit var reviewBtn: Button
+    private lateinit var swipeRefresh: SwipeRefreshLayout
+    private var syncing = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,6 +26,8 @@ class HomeActivity : AppCompatActivity() {
         store = WordStore(this)
         countView = findViewById(R.id.countView)
         reviewBtn = findViewById(R.id.reviewBtn)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
+        swipeRefresh.setOnRefreshListener { sync(force = true) }
 
         findViewById<Button>(R.id.scrambleBtn).setOnClickListener { open(ScrambleActivity::class.java) }
         findViewById<Button>(R.id.choiceBtn).setOnClickListener { open(ChoiceActivity::class.java) }
@@ -34,6 +39,11 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        refreshCounts()
+        sync(force = false)
+    }
+
+    private fun refreshCounts() {
         val n = store.words().size
         countView.text = when (n) {
             0 -> "Aucun mot dans la liste"
@@ -43,6 +53,25 @@ class HomeActivity : AppCompatActivity() {
         val due = Stats.dueCount(store)
         reviewBtn.visibility = if (due == 0) android.view.View.GONE else android.view.View.VISIBLE
         reviewBtn.text = "🔁  Mots à revoir ($due)"
+    }
+
+    /** [force] = true for an explicit pull-to-refresh; false for the quiet
+     *  auto-sync on app resume, which is skipped if we just synced. */
+    private fun sync(force: Boolean) {
+        if (syncing) {
+            swipeRefresh.isRefreshing = false
+            return
+        }
+        syncing = true
+        val started = Sync.autoSync(store, minIntervalMs = if (force) 0L else 20_000L) { result ->
+            syncing = false
+            swipeRefresh.isRefreshing = false
+            if (result is Sync.Result.Ok) refreshCounts()
+        }
+        if (!started) {
+            syncing = false
+            swipeRefresh.isRefreshing = false
+        }
     }
 
     private fun chooseReviewGame() {

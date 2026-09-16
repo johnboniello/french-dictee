@@ -58,6 +58,21 @@ object Sync {
 
     fun isValidCode(code: String): Boolean = Regex("^[a-z0-9-]{8,40}$").matches(code)
 
+    /**
+     * Sync triggered by app-resume or pull-to-refresh rather than a button
+     * tap: no-ops (returns false, never calls [onResult]) if syncing isn't
+     * configured, no family code has been saved yet, or — for the passive
+     * resume case — we already synced within [minIntervalMs]. Pass 0 to
+     * force it, e.g. for an explicit pull-to-refresh gesture.
+     */
+    fun autoSync(store: WordStore, minIntervalMs: Long, onResult: (Result) -> Unit): Boolean {
+        val code = store.familyCode()
+        if (!isConfigured || !isValidCode(code)) return false
+        if (minIntervalMs > 0 && System.currentTimeMillis() - store.lastSyncedAt() < minIntervalMs) return false
+        syncAll(store, code, onResult)
+        return true
+    }
+
     /** Pull + merge + push both list and stats. One background pass, one result. */
     fun syncAll(store: WordStore, code: String, onResult: (Result) -> Unit) {
         Thread {
