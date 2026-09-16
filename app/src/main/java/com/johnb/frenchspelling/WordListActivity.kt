@@ -106,6 +106,7 @@ class WordListActivity : AppCompatActivity() {
                 .setMessage("Remplacer la liste par ces ${parts.size} mots ?\n\nLes « Mots à revoir » sont gardés.")
                 .setPositiveButton("Remplacer") { _, _ ->
                     Stats.prune(store)
+                    store.clearDeletedWords()
                     val uniq = ArrayList<String>()
                     val seen = HashSet<String>()
                     for (p in parts) if (seen.add(p.lowercase())) uniq.add(p)
@@ -130,6 +131,7 @@ class WordListActivity : AppCompatActivity() {
                 items.add(p)
                 added++
             }
+            store.unmarkDeleted(p)
         }
         store.save(items)
         input.setText("")
@@ -138,8 +140,9 @@ class WordListActivity : AppCompatActivity() {
     }
 
     private fun removeAt(index: Int) {
-        items.removeAt(index)
+        val word = items.removeAt(index)
         store.save(items)
+        store.markDeleted(word)
         redraw()
     }
 

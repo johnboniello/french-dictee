@@ -51,6 +51,47 @@ class WordStore(context: Context) {
     /** When "Nouvelle semaine" last replaced the list (epoch millis). 0 if never. */
     fun wordsReplacedAt(): Long = prefs.getLong(KEY_WORDS_REPLACED_AT, 0L)
 
+    // ---- deleted-word tombstones ----
+    // A word removed one at a time (not via "Nouvelle semaine") is remembered
+    // here so a sync can't resurrect it from another device's older copy of
+    // the list — a plain word union has no way to represent a removal.
+
+    fun deletedWords(): MutableList<String> {
+        val raw = prefs.getString(KEY_DELETED, null) ?: return mutableListOf()
+        return try {
+            val arr = JSONArray(raw)
+            MutableList(arr.length()) { arr.getString(it) }
+        } catch (e: Exception) {
+            mutableListOf()
+        }
+    }
+
+    private fun writeDeletedWords(list: List<String>) {
+        val arr = JSONArray()
+        for (w in list) arr.put(w)
+        prefs.edit().putString(KEY_DELETED, arr.toString()).apply()
+    }
+
+    /** Remember a single word removed via "Supprimer" so sync won't bring it back. */
+    fun markDeleted(word: String) {
+        val cur = deletedWords()
+        if (cur.none { it.equals(word, ignoreCase = true) }) {
+            cur.add(word)
+            writeDeletedWords(cur)
+        }
+    }
+
+    /** A re-added word is no longer considered deleted. */
+    fun unmarkDeleted(word: String) {
+        val cur = deletedWords()
+        if (cur.removeAll { it.equals(word, ignoreCase = true) }) writeDeletedWords(cur)
+    }
+
+    /** "Nouvelle semaine" declares a fresh, authoritative list: old tombstones no longer apply. */
+    fun clearDeletedWords() = writeDeletedWords(emptyList())
+
+    fun saveDeletedWordsFromSync(list: List<String>) = writeDeletedWords(list)
+
     // ---- review stats ("Mots à revoir") ----
 
     fun stats(): MutableMap<String, Stats.Entry> = Stats.fromJson(prefs.getString(KEY_STATS, null))
@@ -99,6 +140,7 @@ class WordStore(context: Context) {
         private const val KEY_WORDS = "words"
         private const val KEY_WORDS_AT = "words_updated_at"
         private const val KEY_WORDS_REPLACED_AT = "words_replaced_at"
+        private const val KEY_DELETED = "deleted_words"
         private const val KEY_STATS = "review_stats"
         private const val KEY_STATS_AT = "review_stats_at"
         private const val KEY_SYNCED_AT = "last_synced_at"
