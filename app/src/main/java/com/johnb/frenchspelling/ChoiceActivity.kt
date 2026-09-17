@@ -44,6 +44,14 @@ class ChoiceActivity : AppCompatActivity() {
     private val red = 0xFFC62828.toInt()
     private val onStrong = 0xFFFFFFFF.toInt()
 
+    companion object {
+        private const val KEY_WORDS = "state_words"
+        private const val KEY_ORDER = "state_order"
+        private const val KEY_POS = "state_pos"
+        private const val KEY_SCORE = "state_score"
+        private const val KEY_AIDED = "state_aided"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_choice)
@@ -66,6 +74,8 @@ class ChoiceActivity : AppCompatActivity() {
         listenBtn.setOnClickListener { speakWord() }
         nextBtn.setOnClickListener { nextWord() }
         options.forEachIndexed { i, b -> b.setOnClickListener { onPick(i) } }
+
+        if (savedInstanceState != null) restoreRoundState(savedInstanceState)
 
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
@@ -103,6 +113,40 @@ class ChoiceActivity : AppCompatActivity() {
         tts?.shutdown()
         Feedback.release()
         super.onDestroy()
+    }
+
+    /** Without this, a rotation or the OS reclaiming a backgrounded activity
+     *  recreates a fresh instance with `order` empty, and `onResume` silently
+     *  restarts the round from word 1. */
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (order.isNotEmpty()) {
+            outState.putStringArrayList(KEY_WORDS, ArrayList(words))
+            outState.putIntegerArrayList(KEY_ORDER, ArrayList(order))
+            outState.putInt(KEY_POS, pos)
+            outState.putInt(KEY_SCORE, score)
+            outState.putInt(KEY_AIDED, aided)
+        }
+    }
+
+    /** Restores the in-progress round (word position, order, score) saved by
+     *  [onSaveInstanceState] and rebuilds the four answer choices for the
+     *  current word (a fresh distractor set — whichever option she'd already
+     *  picked wrong for that one word is not restorable, but the round
+     *  position and score are). */
+    private fun restoreRoundState(state: Bundle) {
+        val savedWords = state.getStringArrayList(KEY_WORDS) ?: return
+        val savedOrder = state.getIntegerArrayList(KEY_ORDER) ?: return
+        val savedPos = state.getInt(KEY_POS, 0)
+        if (savedOrder.isEmpty() || savedOrder.any { it !in savedWords.indices } || savedPos !in savedOrder.indices) return
+
+        words = savedWords
+        order = savedOrder
+        pos = savedPos
+        score = state.getInt(KEY_SCORE, 0)
+        aided = state.getInt(KEY_AIDED, 0)
+        showEmpty(false)
+        setupRound()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

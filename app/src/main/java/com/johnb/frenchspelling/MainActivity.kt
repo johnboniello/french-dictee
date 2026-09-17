@@ -71,6 +71,15 @@ class MainActivity : AppCompatActivity() {
 
     private val revealThreshold = 3
 
+    companion object {
+        private const val KEY_WORDS = "state_words"
+        private const val KEY_ORDER = "state_order"
+        private const val KEY_POS = "state_pos"
+        private const val KEY_SCORE = "state_score"
+        private const val KEY_AIDED = "state_aided"
+        private const val KEY_GUESS = "state_guess"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -129,6 +138,8 @@ class MainActivity : AppCompatActivity() {
             if (words.isNotEmpty()) Voice.spellSlowly(tts, ttsReady, currentWord(), store.rate())
         }
 
+        if (savedInstanceState != null) restoreRoundState(savedInstanceState)
+
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 val r = tts?.setLanguage(Locale.FRANCE)
@@ -159,6 +170,44 @@ class MainActivity : AppCompatActivity() {
         LetterAudio.release()
         Feedback.release()
         super.onDestroy()
+    }
+
+    /** Without this, a rotation or the OS reclaiming a backgrounded activity
+     *  recreates a fresh instance with `order` empty, and `onResume` silently
+     *  restarts the round from word 1. */
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (order.isNotEmpty()) {
+            outState.putStringArrayList(KEY_WORDS, ArrayList(words))
+            outState.putIntegerArrayList(KEY_ORDER, ArrayList(order))
+            outState.putInt(KEY_POS, pos)
+            outState.putInt(KEY_SCORE, score)
+            outState.putInt(KEY_AIDED, aidedCount)
+            outState.putString(KEY_GUESS, guess.toString())
+        }
+    }
+
+    /** Restores the in-progress round (word position, order, score, current
+     *  guess) saved by [onSaveInstanceState]. Falls back to a normal fresh
+     *  round (via `onResume`) if the saved state doesn't line up with the
+     *  current word list. */
+    private fun restoreRoundState(state: Bundle) {
+        val savedWords = state.getStringArrayList(KEY_WORDS) ?: return
+        val savedOrder = state.getIntegerArrayList(KEY_ORDER) ?: return
+        val savedPos = state.getInt(KEY_POS, 0)
+        if (savedOrder.isEmpty() || savedOrder.any { it !in savedWords.indices } || savedPos !in savedOrder.indices) return
+
+        words = savedWords
+        order = savedOrder
+        pos = savedPos
+        score = state.getInt(KEY_SCORE, 0)
+        aidedCount = state.getInt(KEY_AIDED, 0)
+        guess.append(state.getString(KEY_GUESS, ""))
+
+        emptyView.visibility = View.GONE
+        emptyAddBtn.visibility = View.GONE
+        practiceBox.visibility = View.VISIBLE
+        render()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
