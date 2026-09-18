@@ -12,6 +12,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -54,6 +55,7 @@ class ScanActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.photoBtn).setOnClickListener { onPhoto() }
         findViewById<Button>(R.id.addBtn).setOnClickListener { addWords() }
+        findViewById<Button>(R.id.replaceBtn).setOnClickListener { replaceWords() }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -149,10 +151,39 @@ class ScanActivity : AppCompatActivity() {
                 current.add(p)
                 added++
             }
+            // A word re-scanned after being individually deleted in a past
+            // week must lose its tombstone, or the next sync's merge will
+            // filter it right back out (union minus deleted).
+            store.unmarkDeleted(p)
         }
         store.save(current)
         toast(if (added == 0) "Ces mots sont déjà dans la liste." else "$added mot(s) ajouté(s).")
         finish()
+    }
+
+    private fun replaceWords() {
+        val parts = reviewField.text.toString().split("\n")
+            .map { it.trim() }.filter { it.isNotEmpty() }
+        if (parts.isEmpty()) {
+            toast("Rien à ajouter.")
+            return
+        }
+        val uniq = ArrayList<String>()
+        val seen = HashSet<String>()
+        for (p in parts) if (seen.add(p.lowercase())) uniq.add(p)
+
+        AlertDialog.Builder(this)
+            .setTitle("Nouvelle semaine")
+            .setMessage("Remplacer la liste par ces ${uniq.size} mots ?\n\nLes « Mots à revoir » sont gardés.")
+            .setPositiveButton("Remplacer") { _, _ ->
+                Stats.prune(store)
+                store.clearDeletedWords()
+                store.replaceWords(uniq)
+                toast("Nouvelle liste : ${uniq.size} mot(s).")
+                finish()
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
     }
 
     private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
