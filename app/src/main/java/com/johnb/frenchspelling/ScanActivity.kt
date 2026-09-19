@@ -1,6 +1,7 @@
 package com.johnb.frenchspelling
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -33,7 +34,19 @@ class ScanActivity : AppCompatActivity() {
     private val takePhoto =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
             val uri = photoUri
-            if (ok && uri != null) runOcr(uri) else hintText.text = "Photo annulée."
+            if (ok && uri != null) {
+                cropPhoto.launch(Intent(this, CropActivity::class.java).setData(uri))
+            } else {
+                hintText.text = "Photo annulée."
+            }
+        }
+
+    // The photo is cropped first so stray words around the list never reach the OCR.
+    private val cropPhoto =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+            val cropped = res.data?.data
+            if (res.resultCode == RESULT_OK && cropped != null) runOcr(cropped)
+            else hintText.text = "Photo annulée."
         }
 
     private val camPermission =

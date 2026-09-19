@@ -56,11 +56,12 @@ audio). Any letter without a clip falls back to the spoken name automatically.
 
 ## Scan a word list
 
-**📷 Scanner une liste** → take a photo of the list → on-device OCR (Google ML Kit,
-runs offline) extracts one candidate word per line into an editable box → fix any
-mistakes → **Ajouter à la liste**. Works best with a printed or clearly written
-list, one word per line, flat and well lit. Asks for the camera permission the
-first time.
+**📷 Scanner une liste** → take a photo of the list → **crop** it (drag the corners
+or edges of the frame, or drag inside it to move it, so stray words around the list
+are left out) → **Lire cette zone** → on-device OCR (Google ML Kit, runs offline)
+extracts one candidate word per line into an editable box → fix any mistakes →
+**Ajouter à la liste**. Works best with a printed or clearly written list, one word
+per line, flat and well lit. Asks for the camera permission the first time.
 
 ## Requirements on the device
 

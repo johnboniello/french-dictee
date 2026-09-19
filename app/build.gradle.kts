@@ -21,8 +21,8 @@ android {
         applicationId = "com.johnb.frenchspelling"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.10"
+        versionCode = 12
+        versionName = "1.11"
 
         // The bundled OCR model ships native libs for every ABI; real phones are ARM.
         // Dropping x86/x86_64 roughly halves the APK. (Re-add them for an emulator.)
@@ -43,6 +43,12 @@ android {
     }
 
     buildTypes {
+        // Lets a debug build install next to the Play Store copy (which Google re-signs,
+        // so a locally signed build can't update it) without touching its data.
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
