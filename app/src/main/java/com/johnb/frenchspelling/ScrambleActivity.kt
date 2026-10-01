@@ -91,6 +91,9 @@ class ScrambleActivity : AppCompatActivity() {
         gap = dp(8)
 
         findViewById<Button>(R.id.listenBtn).setOnClickListener { speakWord() }
+        findViewById<Button>(R.id.slowBtn).setOnClickListener {
+            if (order.isNotEmpty()) Voice.speakSlow(tts, ttsReady, currentWord(), store.rate())
+        }
         findViewById<Button>(R.id.hintBtn).setOnClickListener { revealNext() }
         findViewById<Button>(R.id.spellBtn).setOnClickListener {
             if (order.isNotEmpty()) Voice.spellSlowly(tts, ttsReady, currentWord(), store.rate())

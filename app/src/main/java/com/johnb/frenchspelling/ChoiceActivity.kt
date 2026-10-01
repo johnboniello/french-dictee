@@ -72,6 +72,9 @@ class ChoiceActivity : AppCompatActivity() {
         options.add(findViewById(R.id.opt3))
 
         listenBtn.setOnClickListener { speakWord() }
+        findViewById<Button>(R.id.slowBtn).setOnClickListener {
+            if (order.isNotEmpty()) Voice.speakSlow(tts, ttsReady, currentWord(), store.rate())
+        }
         nextBtn.setOnClickListener { nextWord() }
         options.forEachIndexed { i, b -> b.setOnClickListener { onPick(i) } }
 
@@ -161,7 +164,7 @@ class ChoiceActivity : AppCompatActivity() {
         emptyView.visibility = if (empty) View.VISIBLE else View.GONE
         instructionView.visibility = if (empty) View.GONE else View.VISIBLE
         for (b in options) b.visibility = if (empty) View.GONE else View.VISIBLE
-        listenBtn.visibility = if (empty) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.listenRow).visibility = if (empty) View.GONE else View.VISIBLE
         if (empty) {
             progressView.text = ""
             feedbackView.text = ""

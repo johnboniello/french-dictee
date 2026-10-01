@@ -27,6 +27,15 @@ object Voice {
             .show()
     }
 
+    /** Says the word once at half the current speed, without changing the saved rate. */
+    fun speakSlow(tts: TextToSpeech?, ready: Boolean, word: String, rate: Float) {
+        val t = tts ?: return
+        if (!ready || word.isBlank()) return
+        t.setSpeechRate((rate * 0.5f).coerceAtLeast(0.3f))
+        t.speak(word, TextToSpeech.QUEUE_FLUSH, null, "slow")
+        t.setSpeechRate(rate)
+    }
+
     /** Says the whole word, then spells it out letter by letter with pauses. */
     fun spellSlowly(tts: TextToSpeech?, ready: Boolean, word: String, rate: Float) {
         val t = tts ?: return

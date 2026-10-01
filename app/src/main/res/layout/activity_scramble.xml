@@ -29,6 +29,16 @@
             android:text="🔊  Écouter" />
 
         <Button
+            android:id="@+id/slowBtn"
+            style="@style/Widget.Dictee.Button.BluePale"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:contentDescription="Écouter lentement"
+            android:minWidth="0dp"
+            android:text="🐢" />
+
+        <Button
             android:id="@+id/hintBtn"
             style="@style/Widget.Dictee.Button.Gold"
             android:layout_width="0dp"

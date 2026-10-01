@@ -43,15 +43,34 @@
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
-            <Button
-                android:id="@+id/listenBtn"
-                style="@style/Widget.Dictee.Button.Blue"
+            <LinearLayout
+                android:id="@+id/listenRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp"
-                android:text="🔊  Écouter le mot"
-                android:textSize="20sp" />
+                android:baselineAligned="false"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/listenBtn"
+                    style="@style/Widget.Dictee.Button.Blue"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="16dp"
+                    android:text="🔊  Écouter le mot"
+                    android:textSize="20sp" />
+
+                <Button
+                    android:id="@+id/slowBtn"
+                    style="@style/Widget.Dictee.Button.BluePale"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="🐢  Lent"
+                    android:textAllCaps="false" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/repeatBtn"

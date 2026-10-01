@@ -117,6 +117,9 @@ class MainActivity : AppCompatActivity() {
 
         emptyAddBtn.setOnClickListener { openWordList() }
         listenBtn.setOnClickListener { speakWord() }
+        findViewById<Button>(R.id.slowBtn).setOnClickListener {
+            if (words.isNotEmpty()) Voice.speakSlow(tts, ttsReady, currentWord(), store.rate())
+        }
         repeatBtn.setOnClickListener { speakWord() }
         backspaceBtn.setOnClickListener {
             if (guess.isNotEmpty()) {
