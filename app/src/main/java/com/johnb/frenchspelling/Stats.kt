@@ -197,9 +197,18 @@ object Stats {
             when {
                 l != null && r == null -> out[k] = l
                 r != null && l == null -> out[k] = r
+                // The side with the more recent miss decides the box: a miss
+                // resets it to 1, and taking the max would let the other
+                // device's older, higher box silently erase that miss. Same
+                // last miss -> keep the higher box (progress or "mastered"
+                // made after that shared miss).
                 l != null && r != null -> out[k] = Entry(
                     text = if (l.text.length >= r.text.length) l.text else r.text,
-                    box = maxOf(l.box, r.box),
+                    box = when {
+                        l.lastMissAt > r.lastMissAt -> l.box
+                        r.lastMissAt > l.lastMissAt -> r.box
+                        else -> maxOf(l.box, r.box)
+                    },
                     seen = maxOf(l.seen, r.seen),
                     miss = maxOf(l.miss, r.miss),
                     lastMissAt = maxOf(l.lastMissAt, r.lastMissAt),
