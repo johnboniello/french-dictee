@@ -82,20 +82,22 @@ object Stats {
 
     /** Record one round's outcome. missed = wrong at least once, or answer revealed. */
     fun record(store: WordStore, word: String, missed: Boolean) {
-        if (word.isBlank()) return
-        val m = store.stats()
-        val k = norm(word)
-        val e = m.getOrPut(k) { Entry(word) }
-        e.text = word
-        e.seen++
-        if (missed) {
-            e.box = 1
-            e.miss++
-            e.lastMissAt = System.currentTimeMillis()
-        } else {
-            e.box = (e.box + 1).coerceAtMost(MAX_BOX)
+        synchronized(WordStore.LOCK) {
+            if (word.isBlank()) return
+            val m = store.stats()
+            val k = norm(word)
+            val e = m.getOrPut(k) { Entry(word) }
+            e.text = word
+            e.seen++
+            if (missed) {
+                e.box = 1
+                e.miss++
+                e.lastMissAt = System.currentTimeMillis()
+            } else {
+                e.box = (e.box + 1).coerceAtMost(MAX_BOX)
+            }
+            store.saveStats(m)
         }
-        store.saveStats(m)
     }
 
     fun dueCount(store: WordStore): Int = store.stats().values.count { onList(it) }
@@ -129,58 +131,66 @@ object Stats {
             .map { ManageItem(it.text, it.box, it.miss, it.pinned) }
 
     fun master(store: WordStore, word: String) {
-        val m = store.stats()
-        m[norm(word)]?.let {
-            it.box = MAX_BOX
-            it.pinned = false
-            store.saveStats(m)
+        synchronized(WordStore.LOCK) {
+            val m = store.stats()
+            m[norm(word)]?.let {
+                it.box = MAX_BOX
+                it.pinned = false
+                store.saveStats(m)
+            }
         }
     }
 
     fun setPinned(store: WordStore, word: String, on: Boolean) {
-        val m = store.stats()
-        val e = m.getOrPut(norm(word)) { Entry(word) }
-        e.pinned = on
-        store.saveStats(m)
+        synchronized(WordStore.LOCK) {
+            val m = store.stats()
+            val e = m.getOrPut(norm(word)) { Entry(word) }
+            e.pinned = on
+            store.saveStats(m)
+        }
     }
 
     fun isPinned(store: WordStore, word: String): Boolean = store.stats()[norm(word)]?.pinned == true
 
     /** Graduate aged-out words, drop clearly-finished ones. Called on "Nouvelle semaine". */
     fun prune(store: WordStore) {
-        val m = store.stats()
-        var changed = false
-        val it = m.entries.iterator()
-        while (it.hasNext()) {
-            val e = it.next().value
-            if (isAgedOut(e)) {
-                e.box = GRAD_BOX
-                changed = true
+        synchronized(WordStore.LOCK) {
+            val m = store.stats()
+            var changed = false
+            val it = m.entries.iterator()
+            while (it.hasNext()) {
+                val e = it.next().value
+                if (isAgedOut(e)) {
+                    e.box = GRAD_BOX
+                    changed = true
+                }
+                if (!e.pinned && e.box >= GRAD_BOX &&
+                    (e.lastMissAt == 0L || (System.currentTimeMillis() - e.lastMissAt) > AGE_OUT_MS)
+                ) {
+                    it.remove()
+                    changed = true
+                }
             }
-            if (!e.pinned && e.box >= GRAD_BOX &&
-                (e.lastMissAt == 0L || (System.currentTimeMillis() - e.lastMissAt) > AGE_OUT_MS)
-            ) {
-                it.remove()
-                changed = true
-            }
+            if (changed) store.saveStats(m)
         }
-        if (changed) store.saveStats(m)
     }
 
     /** Remove every graduated (non-pinned) word. Manual "tidy up". */
     fun clearMastered(store: WordStore): Int {
-        val m = store.stats()
-        var n = 0
-        val it = m.entries.iterator()
-        while (it.hasNext()) {
-            val e = it.next().value
-            if (!e.pinned && !onList(e)) {
-                it.remove()
-                n++
+        synchronized(WordStore.LOCK) {
+            val m = store.stats()
+            var n = 0
+            val it = m.entries.iterator()
+            while (it.hasNext()) {
+                val e = it.next().value
+                if (!e.pinned && !onList(e)) {
+                    it.remove()
+                    n++
+                }
             }
+            if (n > 0) store.saveStats(m)
+            return n
         }
-        if (n > 0) store.saveStats(m)
-        return n
     }
 
     fun boxDots(box: Int): String {

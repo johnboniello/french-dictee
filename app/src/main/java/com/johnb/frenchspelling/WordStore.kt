@@ -74,17 +74,21 @@ class WordStore(context: Context) {
 
     /** Remember a single word removed via "Supprimer" so sync won't bring it back. */
     fun markDeleted(word: String) {
-        val cur = deletedWords()
-        if (cur.none { it.equals(word, ignoreCase = true) }) {
-            cur.add(word)
-            writeDeletedWords(cur)
+        synchronized(LOCK) {
+            val cur = deletedWords()
+            if (cur.none { it.equals(word, ignoreCase = true) }) {
+                cur.add(word)
+                writeDeletedWords(cur)
+            }
         }
     }
 
     /** A re-added word is no longer considered deleted. */
     fun unmarkDeleted(word: String) {
-        val cur = deletedWords()
-        if (cur.removeAll { it.equals(word, ignoreCase = true) }) writeDeletedWords(cur)
+        synchronized(LOCK) {
+            val cur = deletedWords()
+            if (cur.removeAll { it.equals(word, ignoreCase = true) }) writeDeletedWords(cur)
+        }
     }
 
     /** "Nouvelle semaine" declares a fresh, authoritative list: old tombstones no longer apply. */
@@ -137,6 +141,13 @@ class WordStore(context: Context) {
     )
 
     companion object {
+        /**
+         * Guards read-modify-write of the stored list, tombstones and stats.
+         * Sync merges on a background thread while screens keep editing on the
+         * main thread; every WordStore instance shares this one lock.
+         */
+        val LOCK = Any()
+
         private const val KEY_WORDS = "words"
         private const val KEY_WORDS_AT = "words_updated_at"
         private const val KEY_WORDS_REPLACED_AT = "words_replaced_at"

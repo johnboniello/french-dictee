@@ -157,19 +157,21 @@ class ScanActivity : AppCompatActivity() {
             toast("Rien à ajouter.")
             return
         }
-        val current = store.words()
         var added = 0
-        for (p in parts) {
-            if (current.none { it.equals(p, ignoreCase = true) }) {
-                current.add(p)
-                added++
+        synchronized(WordStore.LOCK) {   // a background sync may be merging the list
+            val current = store.words()
+            for (p in parts) {
+                if (current.none { it.equals(p, ignoreCase = true) }) {
+                    current.add(p)
+                    added++
+                }
+                // A word re-scanned after being individually deleted in a past
+                // week must lose its tombstone, or the next sync's merge will
+                // filter it right back out (union minus deleted).
+                store.unmarkDeleted(p)
             }
-            // A word re-scanned after being individually deleted in a past
-            // week must lose its tombstone, or the next sync's merge will
-            // filter it right back out (union minus deleted).
-            store.unmarkDeleted(p)
+            store.save(current)
         }
-        store.save(current)
         toast(if (added == 0) "Ces mots sont déjà dans la liste." else "$added mot(s) ajouté(s).")
         finish()
     }

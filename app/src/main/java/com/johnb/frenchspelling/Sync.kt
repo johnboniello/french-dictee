@@ -92,12 +92,20 @@ object Sync {
 
     private fun syncList(store: WordStore, code: String): String {
         val now = System.currentTimeMillis()
-        val local = store.words()
-        val localRep = store.wordsReplacedAt()
-        val localDeleted = store.deletedWords()
 
+        // Fetch first, then read local state and merge+save under the lock.
+        // Reading local before the network call let a word added during the
+        // request get overwritten by the merged list built without it.
         val remote = httpGet("$SYNC_BASE_URL/list/$code")
         if (remote == null || !remote.has("words")) {
+            val local: List<String>
+            val localDeleted: List<String>
+            val localRep: Long
+            synchronized(WordStore.LOCK) {
+                local = store.words()
+                localDeleted = store.deletedWords()
+                localRep = store.wordsReplacedAt()
+            }
             httpPut("$SYNC_BASE_URL/list/$code", JSONObject().apply {
                 put("words", JSONArray(local))
                 put("deleted", JSONArray(localDeleted))
@@ -111,33 +119,39 @@ object Sync {
         val remoteDeleted = jsonToList(remote.optJSONArray("deleted"))
         val remoteRep = remote.optLong("replacedAt", 0L)
 
+        val local: List<String>
         val merged: List<String>
         val mergedDeleted: List<String>
         val replacedAt: Long
         var adopted = false
-        when {
-            remoteRep > localRep -> {        // other device started a new week: adopt it whole
-                merged = remoteWords
-                mergedDeleted = remoteDeleted
-                replacedAt = remoteRep
-                adopted = true
+        synchronized(WordStore.LOCK) {
+            local = store.words()
+            val localRep = store.wordsReplacedAt()
+            val localDeleted = store.deletedWords()
+            when {
+                remoteRep > localRep -> {        // other device started a new week: adopt it whole
+                    merged = remoteWords
+                    mergedDeleted = remoteDeleted
+                    replacedAt = remoteRep
+                    adopted = true
+                }
+                localRep > remoteRep -> {        // this device started a new week: its list wins
+                    merged = local
+                    mergedDeleted = localDeleted
+                    replacedAt = localRep
+                }
+                else -> {                        // same generation -> union, minus anything either
+                                                  // device has explicitly deleted since
+                    mergedDeleted = union(localDeleted, remoteDeleted)
+                    val deletedKeys = mergedDeleted.map { it.lowercase() }.toHashSet()
+                    merged = union(local, remoteWords).filter { it.lowercase() !in deletedKeys }
+                    replacedAt = localRep
+                }
             }
-            localRep > remoteRep -> {        // this device started a new week: its list wins
-                merged = local
-                mergedDeleted = localDeleted
-                replacedAt = localRep
-            }
-            else -> {                        // same generation -> union, minus anything either
-                                              // device has explicitly deleted since
-                mergedDeleted = union(localDeleted, remoteDeleted)
-                val deletedKeys = mergedDeleted.map { it.lowercase() }.toHashSet()
-                merged = union(local, remoteWords).filter { it.lowercase() !in deletedKeys }
-                replacedAt = localRep
-            }
-        }
 
-        store.saveFromSync(merged, now, replacedAt)
-        store.saveDeletedWordsFromSync(mergedDeleted)
+            store.saveFromSync(merged, now, replacedAt)
+            store.saveDeletedWordsFromSync(mergedDeleted)
+        }
         httpPut("$SYNC_BASE_URL/list/$code", JSONObject().apply {
             put("words", JSONArray(merged))
             put("deleted", JSONArray(mergedDeleted))
@@ -154,7 +168,6 @@ object Sync {
 
     private fun syncStats(store: WordStore, code: String): String? {
         val now = System.currentTimeMillis()
-        val local = store.stats()
 
         val remote = try {
             httpGet("$SYNC_BASE_URL/stats/$code")
@@ -166,8 +179,11 @@ object Sync {
         else
             mutableMapOf()
 
-        val merged = Stats.merge(local, remoteStats)
-        store.saveStatsFromSync(merged, now)
+        // Read local stats only now, after the request, so a round finished
+        // while it was in flight isn't overwritten by an older snapshot.
+        val merged = synchronized(WordStore.LOCK) {
+            Stats.merge(store.stats(), remoteStats).also { store.saveStatsFromSync(it, now) }
+        }
 
         return try {
             httpPut("$SYNC_BASE_URL/stats/$code", JSONObject().apply {
